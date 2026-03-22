@@ -1,6 +1,7 @@
 import json
 
 import lark_oapi as lark
+from lark_oapi.api.application.v6 import *
 from lark_oapi.api.im.v1 import *
 
 
@@ -32,6 +33,9 @@ class FeishuApiClient:
 
     def do_p2_im_message_receive_v1(self, data: P2ImMessageReceiveV1):
         pass
+
+    def do_p2_application_bot_menu_v6(self, data: P2ApplicationBotMenuV6):
+        print(f'[ do_p2_application_bot_menu_v6 access ], data: {lark.JSON.marshal(data, indent=4)}')
 
 
 class MyFeishuApiClient(FeishuApiClient):
@@ -98,12 +102,13 @@ class MyFeishuApiClient(FeishuApiClient):
 
 
 def main():
-    feishu_client = MyFeishuApiClient(app_id='cli_a936454f86fa1bc6', app_secret='mPsE50Om9nDuZdOW72AgFfg610630fwc')
+    feishu_client = MyFeishuApiClient(app_id='cli_a937821c0a789ccf', app_secret='s9Jsldxb0PH7MuNDgU33OfFD1eb5v8Gf')
     feishu_client.client = feishu_client.create_lark_client()
 
     feishu_client.ws_client_event_handler = (
         lark.EventDispatcherHandler.builder("", "")
         .register_p2_im_message_receive_v1(feishu_client.do_p2_im_message_receive_v1)
+        .register_p2_application_bot_menu_v6(feishu_client.do_p2_application_bot_menu_v6)
         .build()
     )
     feishu_client.ws_client = feishu_client.create_lark_ws_client()
