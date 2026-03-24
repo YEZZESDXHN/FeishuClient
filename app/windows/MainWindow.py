@@ -4,11 +4,12 @@ from typing import Optional
 import urllib3
 from PySide6.QtCore import QObject, QThread
 from PySide6.QtWidgets import QMainWindow
-from lark_oapi import EventDispatcherHandler
 from lark_oapi.api.im.v1 import P2ImMessageReceiveV1, CreateMessageRequest, CreateMessageRequestBody, \
     CreateMessageResponse, ReplyMessageRequest, ReplyMessageRequestBody, ReplyMessageResponse
 
 from app.CodebeamerClient.CodebeamerClient import CodebeamerClient
+# from app.FeishuApi.CustomEventDispatcherHandler import EventDispatcherHandler
+from lark_oapi import EventDispatcherHandler
 from app.FeishuApi.FeishuApiClient import FeishuApiClient
 from app.FeishuApi.FeishuWsClient import WsClient
 from app.ui.MainWindow import Ui_MainWindow
