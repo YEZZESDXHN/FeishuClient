@@ -1,7 +1,8 @@
 import json
 
-from lark_oapi.api.im.v1 import *
-import lark_oapi as lark
+from lark_oapi import logger
+from lark_oapi.api.im.v1 import CreateMessageRequest, CreateMessageRequestBody, CreateMessageResponse, \
+    ReplyMessageRequest, ReplyMessageRequestBody, ReplyMessageResponse
 
 
 class FeishuMessageApi:
@@ -10,7 +11,7 @@ class FeishuMessageApi:
 
     def send_message(self, receive_id_type: str, receive_id: str, msg_type: str, content: dict, uuid: str = ''):
         if not self._feishu_api_client.client:
-            lark.logger.error(f"Client未初始化")
+            logger.error(f"Client未初始化")
             return
         content_json = json.dumps(content, ensure_ascii=False)
         request: CreateMessageRequest = CreateMessageRequest.builder() \
@@ -26,14 +27,14 @@ class FeishuMessageApi:
 
         # 处理失败返回
         if not response.success():
-            lark.logger.error(
+            logger.error(
                 f"client.im.v1.message.create failed, code: {response.code}, msg: {response.msg}, log_id: {response.get_log_id()}, resp: \n{json.dumps(json.loads(response.raw.content), indent=4, ensure_ascii=False)}")
             return
 
     def send_reply_message(self, message_id: str, msg_type: str, content: dict, reply_in_thread: bool = True,
                            uuid: str = ''):
         if not self._feishu_api_client.client:
-            lark.logger.error(f"Client未初始化")
+            logger.error(f"Client未初始化")
             return
         content_json = json.dumps(content, ensure_ascii=False)
         request: ReplyMessageRequest = (
@@ -52,7 +53,7 @@ class FeishuMessageApi:
 
         response: ReplyMessageResponse = self._feishu_api_client.client.im.v1.message.reply(request)
         if not response.success():
-            lark.logger.error(
+            logger.error(
                 f"client.im.v1.message.reply failed, code: {response.code}, msg: {response.msg}, log_id: {response.get_log_id()}, resp: \n{json.dumps(json.loads(response.raw.content), indent=4, ensure_ascii=False)}")
             return
 

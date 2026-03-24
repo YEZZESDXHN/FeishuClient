@@ -1,8 +1,14 @@
 import json
 from enum import Enum, IntEnum
+from typing import List
+from urllib.parse import urlparse
 
-from lark_oapi.api.bitable.v1 import *
-import lark_oapi as lark
+from lark_oapi import logger
+from lark_oapi.api.bitable.v1 import CreateAppRequest, ReqApp, CreateAppResponse, AppTable, ListAppTableRequest, \
+    ListAppTableResponse, SearchAppTableRecordRequest, SearchAppTableRecordRequestBody, SearchAppTableRecordResponse, \
+    BatchDeleteAppTableRecordRequest, BatchDeleteAppTableRecordRequestBody, BatchDeleteAppTableRecordResponse, \
+    AppTableRecord, BatchCreateAppTableRecordRequest, BatchCreateAppTableRecordRequestBody, \
+    BatchCreateAppTableRecordResponse
 
 
 class UiType(str, Enum):
@@ -138,7 +144,7 @@ class FeishuBitableApi:
         :return:
         """
         if not self._feishu_api_client.client:
-            lark.logger.error(f"Client未初始化")
+            logger.error(f"Client未初始化")
             return
         request: CreateAppRequest = CreateAppRequest.builder() \
             .request_body(ReqApp.builder()
@@ -152,7 +158,7 @@ class FeishuBitableApi:
 
         # 处理失败返回
         if not response.success():
-            lark.logger.error(
+            logger.error(
                 f"client.bitable.v1.app.create failed, code: {response.code}, "
                 f"msg: {response.msg}, log_id: {response.get_log_id()}, "
                 f"resp: \n{json.dumps(json.loads(response.raw.content), indent=4, ensure_ascii=False)}")
@@ -172,6 +178,32 @@ class FeishuBitableApi:
         """
         pass
 
+    @staticmethod
+    def get_feishu_app_token(table_url: str) -> str:
+        """
+        解析飞书多维表格 URL，提取 app_token (base/ 之后，参数之前的部分)
+        """
+        try:
+            # 1. 解析 URL 结构
+            parsed_url = urlparse(table_url)
+
+            # 2. 获取路径部分，例如: /base/UsxxbFSO4a0Q1tszVF9c2JpHnxg
+            path = parsed_url.path
+
+            # 3. 按照 '/' 分割并过滤掉空字符串
+            # 结果类似于 ['base', 'UsxxbFSO4a0Q1tszVF9c2JpHnxg']
+            parts = [p for p in path.split('/') if p]
+
+            # 4. 逻辑判断：app_token 通常在 'base' 关键字之后
+            if 'base' in parts:
+                idx = parts.index('base')
+                if idx + 1 < len(parts):
+                    return parts[idx + 1]
+
+            return ""
+        except Exception:
+            return ""
+
     def get_data_tables(self, app_token: str, page_size: int = 10, page_token: str = '') -> List[AppTable]:
         """
         获取数据表
@@ -188,7 +220,7 @@ class FeishuBitableApi:
 
         # 处理失败返回
         if not response.success():
-            lark.logger.error(
+            logger.error(
                 f"client.bitable.v1.app_table.list failed, "
                 f"code: {response.code}, "
                 f"msg: {response.msg}, "
@@ -198,7 +230,7 @@ class FeishuBitableApi:
         else:
             return response.data.items
 
-    def get_records(self, app_token: str, table_id: str, user_id_type: str, field_names: list = [], page_size: int = 10, page_token: str = ''):
+    def get_records(self, app_token: str, table_id: str, user_id_type: str, field_names: list, page_size: int = 10, page_token: str = ''):
         request: SearchAppTableRecordRequest = SearchAppTableRecordRequest.builder() \
             .app_token(app_token) \
             .table_id(table_id) \
@@ -215,7 +247,7 @@ class FeishuBitableApi:
 
         # 处理失败返回
         if not response.success():
-            lark.logger.error(
+            logger.error(
                 f"client.bitable.v1.app_table_record.search failed, "
                 f"code: {response.code}, "
                 f"msg: {response.msg}, "
@@ -240,7 +272,7 @@ class FeishuBitableApi:
 
         # 处理失败返回
         if not response.success():
-            lark.logger.error(
+            logger.error(
                 f"client.bitable.v1.app_table_record.batch_delete failed, "
                 f"code: {response.code}, "
                 f"msg: {response.msg}, "
@@ -272,7 +304,7 @@ class FeishuBitableApi:
 
         # 处理失败返回
         if not response.success():
-            lark.logger.error(
+            logger.error(
                 f"client.bitable.v1.app_table_record.batch_create failed, "
                 f"code: {response.code}, "
                 f"msg: {response.msg}, "

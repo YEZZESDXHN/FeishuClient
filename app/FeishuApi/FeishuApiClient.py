@@ -1,8 +1,6 @@
-import json
+from typing import Optional
 
-import lark_oapi as lark
-from lark_oapi.api.application.v6 import *
-from lark_oapi.api.im.v1 import *
+from lark_oapi import Client, LogLevel
 
 from app.FeishuApi.FeishuBitableApi import FeishuBitableApi
 from app.FeishuApi.FeishuMessageApi import FeishuMessageApi
@@ -13,7 +11,7 @@ class FeishuApiClient:
     def __init__(self, app_id, app_secret):
         self.app_id = app_id
         self.app_secret = app_secret
-        self.client: Optional[lark.client.Client] = None
+        self.client: Optional[Client] = None
         self.message_api = FeishuMessageApi(self)
         self.bitable_api = FeishuBitableApi(self)
 
@@ -25,10 +23,10 @@ class FeishuApiClient:
         return self.message_api.send_reply_message(message_id, msg_type, content, reply_in_thread, uuid)
 
     def client_init(self):
-        client = lark.Client.builder() \
+        client = Client.builder() \
             .app_id(self.app_id) \
             .app_secret(self.app_secret) \
-            .log_level(lark.LogLevel.ERROR) \
+            .log_level(LogLevel.ERROR) \
             .timeout(5) \
             .build()
         self.client = client

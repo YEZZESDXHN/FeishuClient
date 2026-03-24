@@ -53,16 +53,16 @@ class Ui_MainWindow(object):
 
         self.horizontalLayout_3.addWidget(self.label_3)
 
-        self.lineEdit_3 = QLineEdit(self.groupBox_2)
-        self.lineEdit_3.setObjectName(u"lineEdit_3")
+        self.lineEdit_AppID = QLineEdit(self.groupBox_2)
+        self.lineEdit_AppID.setObjectName(u"lineEdit_AppID")
         sizePolicy2 = QSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed)
         sizePolicy2.setHorizontalStretch(0)
         sizePolicy2.setVerticalStretch(0)
-        sizePolicy2.setHeightForWidth(self.lineEdit_3.sizePolicy().hasHeightForWidth())
-        self.lineEdit_3.setSizePolicy(sizePolicy2)
-        self.lineEdit_3.setMinimumSize(QSize(120, 0))
+        sizePolicy2.setHeightForWidth(self.lineEdit_AppID.sizePolicy().hasHeightForWidth())
+        self.lineEdit_AppID.setSizePolicy(sizePolicy2)
+        self.lineEdit_AppID.setMinimumSize(QSize(120, 0))
 
-        self.horizontalLayout_3.addWidget(self.lineEdit_3)
+        self.horizontalLayout_3.addWidget(self.lineEdit_AppID)
 
 
         self.verticalLayout_2.addLayout(self.horizontalLayout_3)
@@ -77,15 +77,15 @@ class Ui_MainWindow(object):
 
         self.horizontalLayout_4.addWidget(self.label_4)
 
-        self.lineEdit_4 = QLineEdit(self.groupBox_2)
-        self.lineEdit_4.setObjectName(u"lineEdit_4")
-        sizePolicy2.setHeightForWidth(self.lineEdit_4.sizePolicy().hasHeightForWidth())
-        self.lineEdit_4.setSizePolicy(sizePolicy2)
-        self.lineEdit_4.setMinimumSize(QSize(120, 0))
-        self.lineEdit_4.setInputMethodHints(Qt.InputMethodHint.ImhHiddenText|Qt.InputMethodHint.ImhNoAutoUppercase|Qt.InputMethodHint.ImhNoPredictiveText|Qt.InputMethodHint.ImhSensitiveData)
-        self.lineEdit_4.setEchoMode(QLineEdit.EchoMode.Password)
+        self.lineEdit_AppSecret = QLineEdit(self.groupBox_2)
+        self.lineEdit_AppSecret.setObjectName(u"lineEdit_AppSecret")
+        sizePolicy2.setHeightForWidth(self.lineEdit_AppSecret.sizePolicy().hasHeightForWidth())
+        self.lineEdit_AppSecret.setSizePolicy(sizePolicy2)
+        self.lineEdit_AppSecret.setMinimumSize(QSize(120, 0))
+        self.lineEdit_AppSecret.setInputMethodHints(Qt.InputMethodHint.ImhHiddenText|Qt.InputMethodHint.ImhNoAutoUppercase|Qt.InputMethodHint.ImhNoPredictiveText|Qt.InputMethodHint.ImhSensitiveData)
+        self.lineEdit_AppSecret.setEchoMode(QLineEdit.EchoMode.Password)
 
-        self.horizontalLayout_4.addWidget(self.lineEdit_4)
+        self.horizontalLayout_4.addWidget(self.lineEdit_AppSecret)
 
 
         self.verticalLayout_2.addLayout(self.horizontalLayout_4)
@@ -96,10 +96,10 @@ class Ui_MainWindow(object):
 
         self.horizontalLayout_7.addItem(self.horizontalSpacer_2)
 
-        self.pushButton_2 = QPushButton(self.groupBox_2)
-        self.pushButton_2.setObjectName(u"pushButton_2")
+        self.pushButton_FeishuTest = QPushButton(self.groupBox_2)
+        self.pushButton_FeishuTest.setObjectName(u"pushButton_FeishuTest")
 
-        self.horizontalLayout_7.addWidget(self.pushButton_2)
+        self.horizontalLayout_7.addWidget(self.pushButton_FeishuTest)
 
 
         self.verticalLayout_2.addLayout(self.horizontalLayout_7)
@@ -114,13 +114,13 @@ class Ui_MainWindow(object):
 
         self.horizontalLayout_5.addWidget(self.label_5)
 
-        self.lineEdit_5 = QLineEdit(self.groupBox_2)
-        self.lineEdit_5.setObjectName(u"lineEdit_5")
-        sizePolicy2.setHeightForWidth(self.lineEdit_5.sizePolicy().hasHeightForWidth())
-        self.lineEdit_5.setSizePolicy(sizePolicy2)
-        self.lineEdit_5.setMinimumSize(QSize(120, 0))
+        self.lineEdit_BitableUrl = QLineEdit(self.groupBox_2)
+        self.lineEdit_BitableUrl.setObjectName(u"lineEdit_BitableUrl")
+        sizePolicy2.setHeightForWidth(self.lineEdit_BitableUrl.sizePolicy().hasHeightForWidth())
+        self.lineEdit_BitableUrl.setSizePolicy(sizePolicy2)
+        self.lineEdit_BitableUrl.setMinimumSize(QSize(120, 0))
 
-        self.horizontalLayout_5.addWidget(self.lineEdit_5)
+        self.horizontalLayout_5.addWidget(self.lineEdit_BitableUrl)
 
 
         self.verticalLayout_2.addLayout(self.horizontalLayout_5)
@@ -135,13 +135,13 @@ class Ui_MainWindow(object):
 
         self.horizontalLayout_8.addWidget(self.label_6)
 
-        self.comboBox = QComboBox(self.groupBox_2)
-        self.comboBox.setObjectName(u"comboBox")
-        sizePolicy2.setHeightForWidth(self.comboBox.sizePolicy().hasHeightForWidth())
-        self.comboBox.setSizePolicy(sizePolicy2)
-        self.comboBox.setEditable(True)
+        self.comboBox_BitableDateTable = QComboBox(self.groupBox_2)
+        self.comboBox_BitableDateTable.setObjectName(u"comboBox_BitableDateTable")
+        sizePolicy2.setHeightForWidth(self.comboBox_BitableDateTable.sizePolicy().hasHeightForWidth())
+        self.comboBox_BitableDateTable.setSizePolicy(sizePolicy2)
+        self.comboBox_BitableDateTable.setEditable(True)
 
-        self.horizontalLayout_8.addWidget(self.comboBox)
+        self.horizontalLayout_8.addWidget(self.comboBox_BitableDateTable)
 
 
         self.verticalLayout_2.addLayout(self.horizontalLayout_8)
@@ -155,26 +155,6 @@ class Ui_MainWindow(object):
         self.groupBox.setSizePolicy(sizePolicy)
         self.verticalLayout = QVBoxLayout(self.groupBox)
         self.verticalLayout.setObjectName(u"verticalLayout")
-        self.horizontalLayout_2 = QHBoxLayout()
-        self.horizontalLayout_2.setObjectName(u"horizontalLayout_2")
-        self.label_2 = QLabel(self.groupBox)
-        self.label_2.setObjectName(u"label_2")
-        sizePolicy1.setHeightForWidth(self.label_2.sizePolicy().hasHeightForWidth())
-        self.label_2.setSizePolicy(sizePolicy1)
-
-        self.horizontalLayout_2.addWidget(self.label_2)
-
-        self.lineEdit_2 = QLineEdit(self.groupBox)
-        self.lineEdit_2.setObjectName(u"lineEdit_2")
-        sizePolicy2.setHeightForWidth(self.lineEdit_2.sizePolicy().hasHeightForWidth())
-        self.lineEdit_2.setSizePolicy(sizePolicy2)
-        self.lineEdit_2.setMinimumSize(QSize(120, 0))
-
-        self.horizontalLayout_2.addWidget(self.lineEdit_2)
-
-
-        self.verticalLayout.addLayout(self.horizontalLayout_2)
-
         self.horizontalLayout = QHBoxLayout()
         self.horizontalLayout.setObjectName(u"horizontalLayout")
         self.label = QLabel(self.groupBox)
@@ -185,18 +165,39 @@ class Ui_MainWindow(object):
 
         self.horizontalLayout.addWidget(self.label)
 
-        self.lineEdit_username = QLineEdit(self.groupBox)
-        self.lineEdit_username.setObjectName(u"lineEdit_username")
-        sizePolicy2.setHeightForWidth(self.lineEdit_username.sizePolicy().hasHeightForWidth())
-        self.lineEdit_username.setSizePolicy(sizePolicy2)
-        self.lineEdit_username.setMinimumSize(QSize(120, 0))
-        self.lineEdit_username.setInputMethodHints(Qt.InputMethodHint.ImhHiddenText|Qt.InputMethodHint.ImhNoAutoUppercase|Qt.InputMethodHint.ImhNoPredictiveText|Qt.InputMethodHint.ImhSensitiveData)
-        self.lineEdit_username.setEchoMode(QLineEdit.EchoMode.Password)
+        self.lineEdit_Username = QLineEdit(self.groupBox)
+        self.lineEdit_Username.setObjectName(u"lineEdit_Username")
+        sizePolicy2.setHeightForWidth(self.lineEdit_Username.sizePolicy().hasHeightForWidth())
+        self.lineEdit_Username.setSizePolicy(sizePolicy2)
+        self.lineEdit_Username.setMinimumSize(QSize(120, 0))
+        self.lineEdit_Username.setInputMethodHints(Qt.InputMethodHint.ImhNone)
+        self.lineEdit_Username.setEchoMode(QLineEdit.EchoMode.Normal)
 
-        self.horizontalLayout.addWidget(self.lineEdit_username)
+        self.horizontalLayout.addWidget(self.lineEdit_Username)
 
 
         self.verticalLayout.addLayout(self.horizontalLayout)
+
+        self.horizontalLayout_2 = QHBoxLayout()
+        self.horizontalLayout_2.setObjectName(u"horizontalLayout_2")
+        self.label_2 = QLabel(self.groupBox)
+        self.label_2.setObjectName(u"label_2")
+        sizePolicy1.setHeightForWidth(self.label_2.sizePolicy().hasHeightForWidth())
+        self.label_2.setSizePolicy(sizePolicy1)
+
+        self.horizontalLayout_2.addWidget(self.label_2)
+
+        self.lineEdit_Password = QLineEdit(self.groupBox)
+        self.lineEdit_Password.setObjectName(u"lineEdit_Password")
+        sizePolicy2.setHeightForWidth(self.lineEdit_Password.sizePolicy().hasHeightForWidth())
+        self.lineEdit_Password.setSizePolicy(sizePolicy2)
+        self.lineEdit_Password.setMinimumSize(QSize(120, 0))
+        self.lineEdit_Password.setEchoMode(QLineEdit.EchoMode.Password)
+
+        self.horizontalLayout_2.addWidget(self.lineEdit_Password)
+
+
+        self.verticalLayout.addLayout(self.horizontalLayout_2)
 
         self.horizontalLayout_6 = QHBoxLayout()
         self.horizontalLayout_6.setObjectName(u"horizontalLayout_6")
@@ -204,10 +205,10 @@ class Ui_MainWindow(object):
 
         self.horizontalLayout_6.addItem(self.horizontalSpacer)
 
-        self.pushButton = QPushButton(self.groupBox)
-        self.pushButton.setObjectName(u"pushButton")
+        self.pushButton_CBTest = QPushButton(self.groupBox)
+        self.pushButton_CBTest.setObjectName(u"pushButton_CBTest")
 
-        self.horizontalLayout_6.addWidget(self.pushButton)
+        self.horizontalLayout_6.addWidget(self.pushButton_CBTest)
 
 
         self.verticalLayout.addLayout(self.horizontalLayout_6)
@@ -231,7 +232,7 @@ class Ui_MainWindow(object):
         MainWindow.setCentralWidget(self.centralwidget)
         self.menubar = QMenuBar(MainWindow)
         self.menubar.setObjectName(u"menubar")
-        self.menubar.setGeometry(QRect(0, 0, 585, 22))
+        self.menubar.setGeometry(QRect(0, 0, 585, 33))
         MainWindow.setMenuBar(self.menubar)
         self.statusbar = QStatusBar(MainWindow)
         self.statusbar.setObjectName(u"statusbar")
@@ -247,12 +248,12 @@ class Ui_MainWindow(object):
         self.groupBox_2.setTitle(QCoreApplication.translate("MainWindow", u"\u98de\u4e66", None))
         self.label_3.setText(QCoreApplication.translate("MainWindow", u"App ID\uff1a", None))
         self.label_4.setText(QCoreApplication.translate("MainWindow", u"App Secret\uff1a", None))
-        self.pushButton_2.setText(QCoreApplication.translate("MainWindow", u"\u6d4b\u8bd5", None))
+        self.pushButton_FeishuTest.setText(QCoreApplication.translate("MainWindow", u"\u6d4b\u8bd5", None))
         self.label_5.setText(QCoreApplication.translate("MainWindow", u"\u591a\u7ef4\u8868\u683c\uff1a", None))
         self.label_6.setText(QCoreApplication.translate("MainWindow", u"\u6570\u636e\u8868", None))
         self.groupBox.setTitle(QCoreApplication.translate("MainWindow", u"CodeBearm", None))
-        self.label_2.setText(QCoreApplication.translate("MainWindow", u"\u5bc6\u7801\uff1a", None))
         self.label.setText(QCoreApplication.translate("MainWindow", u"\u8d26\u53f7\uff1a", None))
-        self.pushButton.setText(QCoreApplication.translate("MainWindow", u"\u6d4b\u8bd5", None))
+        self.label_2.setText(QCoreApplication.translate("MainWindow", u"\u5bc6\u7801\uff1a", None))
+        self.pushButton_CBTest.setText(QCoreApplication.translate("MainWindow", u"\u6d4b\u8bd5", None))
     # retranslateUi
 
