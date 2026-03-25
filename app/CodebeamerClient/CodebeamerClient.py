@@ -504,7 +504,6 @@ class CodebeamerClient:
         for item in items:
             defect = CodeBeamerDefect()
             defect.defect_id = item['id']
-            defect.url = f"https://cb.alm.vnet.valeo.com/cb/issue/{defect.defect_id}"
             defect.status = item['status']['name']
             defect.summary = item['name']
             defect.assigned_to = ",".join(self.get_email(_item['name']) for _item in item['assignedTo'] if self.get_email(_item['name']))

@@ -26,9 +26,7 @@ class DefectStatus(str, Enum):
 
 class CodeBeamerDefect(BaseModel):
     model_config = ConfigDict(populate_by_name=True)
-    feishu_id: Optional[int] = Field(0, alias="_id")
     defect_id: int = 0
-    url: Optional[str] = ''
     status: Optional[str] = ''
     summary: str = ''
     assigned_to: Optional[str] = ''
@@ -49,7 +47,7 @@ class CodeBeamerDefect(BaseModel):
     def to_dict(self) -> dict:
         return self.model_dump(by_alias=True, exclude_none=True)
 
-    @field_validator('url', 'status', 'summary', 'assigned_to', 'modified_by',
+    @field_validator('status', 'summary', 'assigned_to', 'modified_by',
                      'fixed_in_release', 'reported_in_release', 'team',
                      'owner', 'submitted_by', 'frequency', mode='before')
     @classmethod  # <--- 必须加上这个，且放在 field_validator 下面

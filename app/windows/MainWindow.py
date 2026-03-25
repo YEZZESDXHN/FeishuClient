@@ -101,30 +101,58 @@ class QRunner(QObject):
     def __init__(self, parent: "MainWindow"):
         super().__init__()
         self.parent = parent
+        self.code_beamer_defect_field_map = {
+            'ID': 'defect_id',
+            'Status': 'status',
+            'Summary': 'summary',
+            'Assigned To': 'assigned_to',
+            'modified_at_unix': 'modified_at',
+            'Modified by': 'modified_by',
+            'Fixed in Release': 'fixed_in_release',
+            'Reported in Release': 'reported_in_release',
+            'Team': 'team',
+            'Owner': 'owner',
+            'Submitted by': 'submitted_by',
+            'submitted_at_unix': 'submitted_at',
+            'Frequency': 'frequency',
+            'Severity': 'severity'
+        }
+
+    def code_beamer_defects_conversion_feishu_items(self, defects: list[CodeBeamerDefect]):
+        feishu_items = []
+        for defect in defects:
+            feishu_item = {}
+            for key, value in self.code_beamer_defect_field_map.items():
+                if key == 'ID':
+                    _id = getattr(defect, value, '')
+                    feishu_item[key] = {
+                        "text": str(_id),
+                        "link": f"https://cb.alm.vnet.valeo.com/cb/issue/{_id}"
+                    }
+
+                else:
+                    feishu_item[key] = getattr(defect, value, '')
+            feishu_items.append(feishu_item)
+        return feishu_items
+
+
 
     def sync_code_beamer_defect_to_feishu(self):
         print('sync_code_beamer_defect_to_feishu')
         code_beamer_client = self.parent.cb_client
         feishu_client = self.parent.feishu_client
         feishu_client.client_init()
-        # if code_beamer_client.client._authenticated or code_beamer_client.client.authenticate():
-        #     project_id = 873
-        #     tracker_id = code_beamer_client.get_tracker_id_by_name('Defect', project_id)
-        #     items = code_beamer_client.get_all_items_by_query(tracker_id=tracker_id, filter_active=False)
-        #     defs = code_beamer_client.convert_defect_items(items)
-        #     print(defs[0].to_dict())
-        #     records = []
-        #     records.append(defs[0].to_dict())
-        #     feishu_client.bitable_api.add_records(app_token=feishu_client.bitable_api.get_feishu_app_token(self.parent.feishu_bitable_url),
-        #                                           table_id='tblxcPJsx592qrPX',
-        #                                           records=records)
+        if code_beamer_client.client._authenticated or code_beamer_client.client.authenticate():
+            project_id = 873
+            tracker_id = code_beamer_client.get_tracker_id_by_name('Defect', project_id)
+            items = code_beamer_client.get_all_items_by_query(tracker_id=tracker_id, filter_active=False)
+            defs = code_beamer_client.convert_defect_items(items)
+            records = self.code_beamer_defects_conversion_feishu_items(defs)
+            feishu_client.bitable_api.add_records(
+                app_token=feishu_client.bitable_api.get_feishu_app_token(self.parent.feishu_bitable_url),
+                table_id='tblxcPJsx592qrPX',
+                records=records)
 
-        records = []
-        records.append(CodeBeamerDefect().to_dict())
-        feishu_client.bitable_api.add_records(
-            app_token=feishu_client.bitable_api.get_feishu_app_token(self.parent.feishu_bitable_url),
-            table_id='tblxcPJsx592qrPX',
-            records=records)
 
 
 
@@ -139,12 +167,12 @@ class MainWindow(QMainWindow, Ui_MainWindow):
     def __init__(self):
         super().__init__()
         self.setupUi(self)
-        self.cb_username: str = ''
-        self.cb_password: str = ''
+        self.cb_username: str = 'zwang20'
+        self.cb_password: str = 'VALEOvaleo20261.'
 
-        self.feishu_app_id: str = ''
-        self.feishu_secret: str = ''
-        self.feishu_bitable_url: str = ''
+        self.feishu_app_id: str = 'cli_a923887f96b99bd1'
+        self.feishu_secret: str = '9sqw1LD8xxsBC55Uzz5BjgypW3mWZ0ho'
+        self.feishu_bitable_url: str = 'https://valeo.feishu.cn/base/UsxxbFSO4a0Q1tszVF9c2JpHnxg?table=tblxcPJsx592qrPX&view=vewwQdXw7n'
         self.feishu_bitable_tables: dict = {}  # {table_id: table_name}
         self.feishu_bitable_app_token: str = ''
 
