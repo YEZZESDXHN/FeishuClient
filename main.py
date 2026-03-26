@@ -7,7 +7,7 @@ from PySide6.QtWidgets import QApplication
 from app.windows.MainWindow import MainWindow
 
 
-def setup_logging(config_file="./logging.conf", logger_name="UDSTool"):
+def setup_logging(config_file="./logging.conf", logger_name="FeishuClient"):
     """
     加载日志配置，并自动创建日志存放目录
 
@@ -70,6 +70,7 @@ def setup_logging(config_file="./logging.conf", logger_name="UDSTool"):
 
 if __name__ == "__main__":
     # main()
+    logger = setup_logging("./logging.conf", "FeishuClient")
     app = QApplication(sys.argv)
     app.setStyle("WindowsVista")
     # app.setStyle("Fusion")

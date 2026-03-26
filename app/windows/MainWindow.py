@@ -3,7 +3,7 @@ import logging
 from typing import Optional
 from pathlib import Path
 import urllib3
-from PySide6.QtCore import QObject, QThread, Signal
+from PySide6.QtCore import QObject, QThread, Signal, QTimer
 from PySide6.QtWidgets import QMainWindow
 
 from app.DBManager.DBManager import DBManager
@@ -94,12 +94,17 @@ class QWsClient(QObject, WsClient):
 
 class QFeishuApiClient(QObject, FeishuApiClient):
     signal_data_tables = Signal(object)
+    signal_init_finish = Signal()
     def __init__(self, app_id, app_secret):
         super().__init__(app_id=app_id, app_secret=app_secret)
 
     def get_data_tables(self, app_token):
         data_tables = self.bitable_api.get_data_tables(app_token)
         self.signal_data_tables.emit(data_tables)
+
+    def client_init(self):
+        super().client_init()
+        self.signal_init_finish.emit()
 
 
 class QCodebeamerClient(QObject, CodebeamerClient):
@@ -185,8 +190,6 @@ class QRunner(QObject):
             print('ok')
 
 
-
-
 class MainWindow(QMainWindow, Ui_MainWindow):
     """
     自定义的主窗口类，继承了 QMainWindow（Qt主窗口行为）
@@ -195,6 +198,11 @@ class MainWindow(QMainWindow, Ui_MainWindow):
     def __init__(self):
         super().__init__()
         self.setupUi(self)
+        self.check_ws_client_state_timer = QTimer()
+        self.check_ws_client_state_timer.setInterval(500)
+        self.check_ws_client_state_timer.timeout.connect(self.check_feishu_client_state)
+        self.check_ws_client_state_timer.start()
+        self.feishu_client_state: bool = False  #
         self.db_path = 'Database/database.db'
         self.db_manager: Optional[DBManager] = None
         self.init_database(self.db_path)
@@ -221,6 +229,8 @@ class MainWindow(QMainWindow, Ui_MainWindow):
 
     def init_ui(self):
         config = self.db_manager.info_db.get_config()
+        self.pushButton_RefreshDataTable.setDisabled(True)
+        self.comboBox_BitableDateTable.setDisabled(True)
         if config:
             try:
                 self.cb_username = config['cb_username']
@@ -256,6 +266,12 @@ class MainWindow(QMainWindow, Ui_MainWindow):
                 logger.exception(f"创建数据库文件夹失败：{str(e)}")
         self.db_manager = DBManager(db)
 
+    def check_feishu_client_state(self):
+        if self.feishu_client.client and self.feishu_ws_client.ws_client and self.feishu_ws_client.ws_client._conn:
+            self.feishu_client_state = True
+            self.pushButton_RefreshDataTable.setDisabled(False)
+            self.comboBox_BitableDateTable.setDisabled(False)
+
     def _runner_init(self):
         self.runner_thread = QThread()
         self.runner = QRunner(self)
@@ -288,9 +304,11 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         self.lineEdit_BitableUrl.editingFinished.connect(self.update_feishu_bitable_url)
         self.pushButton_CBTest.clicked.connect(self.runner.sync_code_beamer_defect_to_feishu)
         self.pushButton_FeishuTest.clicked.connect(self.feishu_client.client_init)
+        self.pushButton_FeishuTest.clicked.connect(self.feishu_ws_client.ws_client_start)
         self.feishu_client.signal_data_tables.connect(self.update_feishu_bitable_tables)
         self.signal_update_data_tables.connect(self.feishu_client.get_data_tables)
         self.pushButton_RefreshDataTable.clicked.connect(self.update_feishu_bitable_url)
+        self.feishu_client.signal_init_finish.connect(self.check_feishu_client_state)
 
     def update_cb_username(self):
         self.cb_username = self.lineEdit_Username.text()
@@ -317,7 +335,8 @@ class MainWindow(QMainWindow, Ui_MainWindow):
     def update_feishu_bitable_url(self):
         self.feishu_bitable_url = self.lineEdit_BitableUrl.text()
         self.feishu_bitable_app_token = self.feishu_client.bitable_api.get_feishu_app_token(self.feishu_bitable_url)
-        self.signal_update_data_tables.emit(self.feishu_bitable_app_token)
+        if self.feishu_client_state:
+            self.signal_update_data_tables.emit(self.feishu_bitable_app_token)
         self.db_manager.info_db.update_single_field(field_name='feishu_bitable_url', value=self.feishu_bitable_url)
 
 
