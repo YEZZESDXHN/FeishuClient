@@ -26,7 +26,6 @@ class FeishuApiClient:
         client = Client.builder() \
             .app_id(self.app_id) \
             .app_secret(self.app_secret) \
-            .log_level(LogLevel.ERROR) \
-            .timeout(30) \
+            .timeout(60) \
             .build()
         self.client = client

@@ -230,7 +230,7 @@ class FeishuBitableApi:
         else:
             return response.data.items
 
-    def get_records(self, app_token: str, table_id: str, user_id_type: str, field_names: list, page_size: int = 10, page_token: str = ''):
+    def get_records(self, app_token: str, table_id: str, field_names: list, user_id_type: str = 'open_id', page_size: int = 500, page_token: str = '') -> list[AppTableRecord]:
         request: SearchAppTableRecordRequest = SearchAppTableRecordRequest.builder() \
             .app_token(app_token) \
             .table_id(table_id) \
@@ -253,15 +253,14 @@ class FeishuBitableApi:
                 f"msg: {response.msg}, "
                 f"log_id: {response.get_log_id()}, "
                 f"resp: \n{json.dumps(json.loads(response.raw.content), indent=4, ensure_ascii=False)}")
-            return
+            return []
         else:
             return response.data.items
 
-    def delete_records(self, app_token: str, table_id: str, records: list, ignore_consistency_check: bool = True):
+    def delete_records(self, app_token: str, table_id: str, records: list):
         request: BatchDeleteAppTableRecordRequest = BatchDeleteAppTableRecordRequest.builder() \
             .app_token(app_token) \
             .table_id(table_id) \
-            .ignore_consistency_check(ignore_consistency_check) \
             .request_body(BatchDeleteAppTableRecordRequestBody.builder()
                           .records(records)
                           .build()) \

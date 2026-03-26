@@ -2,6 +2,7 @@
 
 from typing import Optional
 
+from .api.bitable.service import BitableService
 from .core.utils.files import Files
 from .core.const import UTF_8, APPLICATION_JSON
 from .core import logger, JSON
@@ -29,6 +30,7 @@ class Client(object):
         self.block: Optional[BlockService] = None
         self.im: Optional[ImService] = None
         self.contact: Optional[ContactService] = None
+        self.bitable: Optional[BitableService] = None
 
     @staticmethod
     def builder() -> "ClientBuilder":
@@ -139,6 +141,7 @@ class ClientBuilder(object):
         client.block = BlockService(self._config)
         client.im = ImService(self._config)
         client.contact = ContactService(self._config)
+        client.bitable = BitableService(self._config)
 
         return client
 

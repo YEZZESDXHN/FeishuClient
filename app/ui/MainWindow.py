@@ -139,9 +139,17 @@ class Ui_MainWindow(object):
         self.comboBox_BitableDateTable.setObjectName(u"comboBox_BitableDateTable")
         sizePolicy2.setHeightForWidth(self.comboBox_BitableDateTable.sizePolicy().hasHeightForWidth())
         self.comboBox_BitableDateTable.setSizePolicy(sizePolicy2)
-        self.comboBox_BitableDateTable.setEditable(True)
+        self.comboBox_BitableDateTable.setEditable(False)
 
         self.horizontalLayout_8.addWidget(self.comboBox_BitableDateTable)
+
+        self.pushButton_RefreshDataTable = QPushButton(self.groupBox_2)
+        self.pushButton_RefreshDataTable.setObjectName(u"pushButton_RefreshDataTable")
+        sizePolicy1.setHeightForWidth(self.pushButton_RefreshDataTable.sizePolicy().hasHeightForWidth())
+        self.pushButton_RefreshDataTable.setSizePolicy(sizePolicy1)
+        self.pushButton_RefreshDataTable.setMaximumSize(QSize(50, 16777215))
+
+        self.horizontalLayout_8.addWidget(self.pushButton_RefreshDataTable)
 
 
         self.verticalLayout_2.addLayout(self.horizontalLayout_8)
@@ -251,6 +259,7 @@ class Ui_MainWindow(object):
         self.pushButton_FeishuTest.setText(QCoreApplication.translate("MainWindow", u"\u6d4b\u8bd5", None))
         self.label_5.setText(QCoreApplication.translate("MainWindow", u"\u591a\u7ef4\u8868\u683c\uff1a", None))
         self.label_6.setText(QCoreApplication.translate("MainWindow", u"\u6570\u636e\u8868", None))
+        self.pushButton_RefreshDataTable.setText(QCoreApplication.translate("MainWindow", u"\u5237\u65b0", None))
         self.groupBox.setTitle(QCoreApplication.translate("MainWindow", u"CodeBearm", None))
         self.label.setText(QCoreApplication.translate("MainWindow", u"\u8d26\u53f7\uff1a", None))
         self.label_2.setText(QCoreApplication.translate("MainWindow", u"\u5bc6\u7801\uff1a", None))
