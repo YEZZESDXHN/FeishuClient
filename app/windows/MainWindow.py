@@ -4,9 +4,13 @@ from typing import Optional
 from pathlib import Path
 import urllib3
 from PySide6.QtCore import QObject, QThread, Signal, QTimer
-from PySide6.QtWidgets import QMainWindow
+from PySide6.QtWidgets import QMainWindow, QVBoxLayout
+from apscheduler.schedulers.qt import QtScheduler
+from apscheduler.triggers.cron import CronTrigger
 
 from app.DBManager.DBManager import DBManager
+from app.resources.resources import IconEngine
+from app.windows.SchedulerJobsTable import SchedulerJobsTable
 from lark_oapi.api.im.v1 import P2ImMessageReceiveV1, CreateMessageRequest, CreateMessageRequestBody, \
     CreateMessageResponse, ReplyMessageRequest, ReplyMessageRequestBody, ReplyMessageResponse
 
@@ -35,61 +39,62 @@ class QWsClient(QObject, WsClient):
         )
 
     def do_p2_im_message_receive_v1(self, data: P2ImMessageReceiveV1):
-        if data.event.message.message_type == "text":
-            res_content = json.loads(data.event.message.content)["text"]
-        else:
-            res_content = "解析消息失败，请发送文本消息\nparse message failed, please send text message"
-
-        content = json.dumps(
-            {
-                "text": "收到你发送的消息："
-                        + res_content
-            }
-        )
-
-        if data.event.message.chat_type == "p2p":
-            request: CreateMessageRequest = (
-                CreateMessageRequest.builder()
-                .receive_id_type("chat_id")
-                .request_body(
-                    CreateMessageRequestBody.builder()
-                    .receive_id(data.event.message.chat_id)
-                    .msg_type("text")
-                    .content(content)
-                    .build()
-                )
-                .build()
-            )
-            # 使用OpenAPI发送消息
-            # Use send OpenAPI to send messages
-            # https://open.feishu.cn/document/uAjLw4CM/ukTMukTMukTM/reference/im-v1/message/create
-            response: CreateMessageResponse = self.feishu_client.client.im.v1.message.create(request)
-            print('self.client.im.v1.message.create(request)')
-
-            if not response.success():
-                raise Exception(
-                    f"client.im.v1.message.create failed, code: {response.code}, msg: {response.msg}, log_id: {response.get_log_id()}"
-                )
-        else:
-            request: ReplyMessageRequest = (
-                ReplyMessageRequest.builder()
-                .message_id(data.event.message.message_id)
-                .request_body(
-                    ReplyMessageRequestBody.builder()
-                    .content(content)
-                    .msg_type("text")
-                    .build()
-                )
-                .build()
-            )
-            # 使用OpenAPI回复消息
-            # Reply to messages using send OpenAPI
-            # https://open.feishu.cn/document/uAjLw4CM/ukTMukTMukTM/reference/im-v1/message/reply
-            response: ReplyMessageResponse = self.feishu_client.client.im.v1.message.reply(request)
-            if not response.success():
-                raise Exception(
-                    f"client.im.v1.message.reply failed, code: {response.code}, msg: {response.msg}, log_id: {response.get_log_id()}"
-                )
+        pass
+        # if data.event.message.message_type == "text":
+        #     res_content = json.loads(data.event.message.content)["text"]
+        # else:
+        #     res_content = "解析消息失败，请发送文本消息\nparse message failed, please send text message"
+        #
+        # content = json.dumps(
+        #     {
+        #         "text": "收到你发送的消息："
+        #                 + res_content
+        #     }
+        # )
+        #
+        # if data.event.message.chat_type == "p2p":
+        #     request: CreateMessageRequest = (
+        #         CreateMessageRequest.builder()
+        #         .receive_id_type("chat_id")
+        #         .request_body(
+        #             CreateMessageRequestBody.builder()
+        #             .receive_id(data.event.message.chat_id)
+        #             .msg_type("text")
+        #             .content(content)
+        #             .build()
+        #         )
+        #         .build()
+        #     )
+        #     # 使用OpenAPI发送消息
+        #     # Use send OpenAPI to send messages
+        #     # https://open.feishu.cn/document/uAjLw4CM/ukTMukTMukTM/reference/im-v1/message/create
+        #     response: CreateMessageResponse = self.feishu_client.client.im.v1.message.create(request)
+        #     print('self.client.im.v1.message.create(request)')
+        #
+        #     if not response.success():
+        #         raise Exception(
+        #             f"client.im.v1.message.create failed, code: {response.code}, msg: {response.msg}, log_id: {response.get_log_id()}"
+        #         )
+        # else:
+        #     request: ReplyMessageRequest = (
+        #         ReplyMessageRequest.builder()
+        #         .message_id(data.event.message.message_id)
+        #         .request_body(
+        #             ReplyMessageRequestBody.builder()
+        #             .content(content)
+        #             .msg_type("text")
+        #             .build()
+        #         )
+        #         .build()
+        #     )
+        #     # 使用OpenAPI回复消息
+        #     # Reply to messages using send OpenAPI
+        #     # https://open.feishu.cn/document/uAjLw4CM/ukTMukTMukTM/reference/im-v1/message/reply
+        #     response: ReplyMessageResponse = self.feishu_client.client.im.v1.message.reply(request)
+        #     if not response.success():
+        #         raise Exception(
+        #             f"client.im.v1.message.reply failed, code: {response.code}, msg: {response.msg}, log_id: {response.get_log_id()}"
+        #         )
 
 
 class QFeishuApiClient(QObject, FeishuApiClient):
@@ -150,44 +155,87 @@ class QRunner(QObject):
             feishu_items.append(feishu_item)
         return feishu_items
 
-
-
     def sync_code_beamer_defect_to_feishu(self):
         code_beamer_client = self.parent.cb_client
         feishu_client = self.parent.feishu_client
         if not feishu_client.client:
             feishu_client.client_init()
         if code_beamer_client.client._authenticated or code_beamer_client.client.authenticate():
-            project_id = 873
-            tracker_id = code_beamer_client.get_tracker_id_by_name('Defect', project_id)
-            items = code_beamer_client.get_all_items_by_query(tracker_id=tracker_id, filter_active=False)
-            defs = code_beamer_client.convert_defect_items(items)
-            result = self.parent.db_manager.defects_db.batch_upsert_defects(defs)
-            print(result)
-            table_index = self.parent.comboBox_BitableDateTable.currentIndex()
-            table_id = self.parent.feishu_bitable_tables[table_index]['table_id']
-            app_token = self.parent.feishu_bitable_app_token
-            feishu_items = feishu_client.bitable_api.get_records(
-                app_token=app_token,
-                table_id=table_id,
-                field_names=['Status']
-            )
-            record_ids = []
-            for feishu_item in feishu_items:
-                record_ids.append(feishu_item.record_id)
+            try:
+                project_id = 873
+                tracker_id = code_beamer_client.get_tracker_id_by_name('Defect', project_id)
+                items = code_beamer_client.get_all_items_by_query(tracker_id=tracker_id, filter_active=False)
+                defs = code_beamer_client.convert_defect_items(items)
+                result = self.parent.db_manager.defects_db.batch_upsert_defects(defs)
+            except Exception as e:
+                logger.error(f'获取CB Defect失败，{e}')
+                feishu_client.message_api.send_message(
+                    receive_id_type='email',
+                    receive_id='zhichen.wang@valeo.com',
+                    msg_type='text',
+                    content={'text': f"Defect同步失败"}
+                )
+                return
+            try:
+                table_index = self.parent.comboBox_BitableDateTable.currentIndex()
+                table_id = self.parent.feishu_bitable_tables[table_index]['table_id']
+                app_token = self.parent.feishu_bitable_app_token
+                feishu_items = feishu_client.bitable_api.get_records(
+                    app_token=app_token,
+                    table_id=table_id,
+                    field_names=['Status']
+                )
+            except Exception as e:
+                table_index = self.parent.comboBox_BitableDateTable.currentIndex()
+                logger.error(f"获取多维表格数据表{self.parent.feishu_bitable_tables[table_index]['name']}记录失败，{e}")
+                feishu_client.message_api.send_message(
+                    receive_id_type='email',
+                    receive_id='zhichen.wang@valeo.com',
+                    msg_type='text',
+                    content={'text': f"Defect同步失败"}
+                )
+                return
+            try:
+                record_ids = []
+                for feishu_item in feishu_items:
+                    record_ids.append(feishu_item.record_id)
 
-            feishu_client.bitable_api.delete_records(
-                app_token=app_token,
-                table_id=table_id,
-                records=record_ids
-            )
+                feishu_client.bitable_api.delete_records(
+                    app_token=app_token,
+                    table_id=table_id,
+                    records=record_ids
+                )
+            except Exception as e:
+                logger.error(f"删除多维表格数据失败，{e}")
+                feishu_client.message_api.send_message(
+                    receive_id_type='email',
+                    receive_id='zhichen.wang@valeo.com',
+                    msg_type='text',
+                    content={'text': f"Defect同步失败"}
+                )
+                return
+            try:
+                records = self.code_beamer_defects_conversion_feishu_items(defs)
+                feishu_client.bitable_api.add_records(
+                    app_token=app_token,
+                    table_id=table_id,
+                    records=records)
+            except Exception as e:
+                logger.error(f"同步多维表格数据失败，{e}")
+                feishu_client.message_api.send_message(
+                    receive_id_type='email',
+                    receive_id='zhichen.wang@valeo.com',
+                    msg_type='text',
+                    content={'text': f"Defect同步失败"}
+                )
+                return
 
-            records = self.code_beamer_defects_conversion_feishu_items(defs)
-            feishu_client.bitable_api.add_records(
-                app_token=app_token,
-                table_id=table_id,
-                records=records)
-            print('ok')
+            feishu_client.message_api.send_message(
+                receive_id_type='email',
+                receive_id='zhichen.wang@valeo.com',
+                msg_type='text',
+                content={'text': f"Defect同步成功，{result}"}
+            )
 
 
 class MainWindow(QMainWindow, Ui_MainWindow):
@@ -195,17 +243,26 @@ class MainWindow(QMainWindow, Ui_MainWindow):
     自定义的主窗口类，继承了 QMainWindow（Qt主窗口行为）
     """
     signal_update_data_tables = Signal(str)
+
+    signal_job_sync_defects = Signal()
     def __init__(self):
         super().__init__()
+        self.job_name_map = {
+            "同步Defects": self.signal_job_sync_defects
+        }
         self.setupUi(self)
+        self.scheduler = QtScheduler()
+        self.scheduler.start()
         self.check_ws_client_state_timer = QTimer()
         self.check_ws_client_state_timer.setInterval(500)
-        self.check_ws_client_state_timer.timeout.connect(self.check_feishu_client_state)
+        self.check_ws_client_state_timer.timeout.connect(self.check_feishu_ws_client_state)
         self.check_ws_client_state_timer.start()
         self.feishu_client_state: bool = False  #
+        self.feishu_ws_client_state: bool = False  #
         self.db_path = 'Database/database.db'
         self.db_manager: Optional[DBManager] = None
         self.init_database(self.db_path)
+        self.init_scheduler_jobs()
         self.cb_username: str = ''
         self.cb_password: str = '.'
 
@@ -227,7 +284,110 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         self.signal_connect()
         self.init_ui()
 
+    def setup_ig_panel(self):
+        layout = self.tab_scheduler.layout()
+        if not layout:
+            layout = QVBoxLayout(self.tab_scheduler)
+            layout.setSpacing(15)  # 控件之间的间距
+
+        self.scheduler_jobs_table = SchedulerJobsTable(parent=self)
+        layout.addWidget(self.scheduler_jobs_table)
+
+    def execute_task_logic(self, job_name):
+        """
+        所有定时任务的统一执行逻辑
+        """
+        self.job_name_map[job_name].emit()
+
+    def init_scheduler_jobs(self):
+        """
+        从数据库加载所有任务并注入到调度器中
+        通常在程序启动（__init__ 或 show 后）调用一次
+        """
+        # 1. 从数据库获取所有任务记录（返回的是字典列表）
+        jobs = self.db_manager.scheduler_db.get_all_jobs()
+        if not jobs:
+            logger.info("数据库中无定时任务记录")
+            return
+
+        count = 0
+        for job_info in jobs:
+            job_id = job_info['job_id']
+            job_type = job_info['job_type']
+            job_param = job_info['job_param']
+            job_name = job_info.get('job_name', '未命名任务')
+
+            try:
+                self.add_job(job_id, job_name, job_type, job_param)
+
+                count += 1
+                logger.info(f"成功恢复任务: {job_name} (ID: {job_id})")
+
+            except Exception as e:
+                logger.error(f"恢复任务 {job_id} 失败: {str(e)}")
+
+        logger.info(f"定时任务初始化完成，共加载 {count} 个任务")
+
+    def reschedule_job(self, job_id, job_type, job_param):
+        try:
+            # 1. 如果是 cron 类型，且你传入的是 "5 * * * *" 这种字符串
+            if job_type == 'cron':
+                trigger = CronTrigger.from_crontab(job_param)
+                return self.scheduler.reschedule_job(job_id, trigger=trigger)
+            # 2. 如果是 interval 类型 (假设 job_param 是秒数，或者是 "seconds=10" 这种格式)
+            elif job_type == 'interval':
+                # 如果你的 job_param 是数字，这里可以直接用 seconds=int(job_param)
+                # 或者更通用的做法是解析参数，这里演示最常用的秒数：
+                return self.scheduler.reschedule_job(job_id, trigger='interval', seconds=int(job_param))
+
+            else:
+                raise ValueError(f"不支持的触发类型: {job_type}")
+
+        except Exception as e:
+            print(f"重设任务失败: {e}")
+            return None
+
+    def remove_job(self, job_id):
+        self.scheduler.remove_job(job_id)
+
+    def add_job(self, job_id, job_name, job_type, job_param):
+        if job_type == 'interval':
+            # 转换参数为整数（秒）
+            self.scheduler.add_job(
+                self.execute_task_logic,  # 统一的任务执行入口
+                'interval',
+                seconds=int(job_param),
+                id=job_id,
+                name=job_name,
+                args=[job_name]  # 传递 ID 和名称给执行函数
+            )
+
+        elif job_type == 'cron':
+            # 如果是 Cron 表达式，直接传入字符串
+            # 假设 UI 存入的是简单的秒数偏移或标准 5/6 位表达式
+            self.scheduler.add_job(
+                self.execute_task_logic,
+                trigger=CronTrigger.from_crontab(job_param),
+                id=job_id,
+                name=job_name,
+                args=[job_name]
+            )
+
+        elif job_type == 'date':
+            self.scheduler.add_job(
+                self.execute_task_logic,
+                'date',
+                run_date=job_param,  # 需符合 ISO 8601 格式
+                id=job_id,
+                name=job_name,
+                args=[job_name]
+            )
+
     def init_ui(self):
+        self.setup_ig_panel()
+        self.pushButton_FeishuClient.setIcon(IconEngine.get_icon('unlink', 'red'))
+        self.pushButton_FeishuWsClient.setIcon(IconEngine.get_icon('unlink', 'red'))
+
         config = self.db_manager.info_db.get_config()
         self.pushButton_RefreshDataTable.setDisabled(True)
         self.comboBox_BitableDateTable.setDisabled(True)
@@ -266,11 +426,20 @@ class MainWindow(QMainWindow, Ui_MainWindow):
                 logger.exception(f"创建数据库文件夹失败：{str(e)}")
         self.db_manager = DBManager(db)
 
+    def check_feishu_ws_client_state(self):
+        if self.feishu_ws_client.ws_client and self.feishu_ws_client.ws_client._conn:
+            self.feishu_ws_client_state = True
+            self.pushButton_FeishuWsClient.setIcon(IconEngine.get_icon('link', 'green'))
+        else:
+            self.feishu_ws_client_state = False
+            self.pushButton_FeishuWsClient.setIcon(IconEngine.get_icon('unlink', 'red'))
+
     def check_feishu_client_state(self):
-        if self.feishu_client.client and self.feishu_ws_client.ws_client and self.feishu_ws_client.ws_client._conn:
+        if self.feishu_client.client:
             self.feishu_client_state = True
             self.pushButton_RefreshDataTable.setDisabled(False)
             self.comboBox_BitableDateTable.setDisabled(False)
+            self.pushButton_FeishuClient.setIcon(IconEngine.get_icon('link', 'green'))
 
     def _runner_init(self):
         self.runner_thread = QThread()
@@ -303,12 +472,15 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         self.lineEdit_AppSecret.editingFinished.connect(self.update_feishu_secret)
         self.lineEdit_BitableUrl.editingFinished.connect(self.update_feishu_bitable_url)
         self.pushButton_CBTest.clicked.connect(self.runner.sync_code_beamer_defect_to_feishu)
-        self.pushButton_FeishuTest.clicked.connect(self.feishu_client.client_init)
-        self.pushButton_FeishuTest.clicked.connect(self.feishu_ws_client.ws_client_start)
+        self.pushButton_FeishuClient.clicked.connect(self.feishu_client.client_init)
+        self.pushButton_FeishuWsClient.clicked.connect(self.feishu_ws_client.ws_client_start)
         self.feishu_client.signal_data_tables.connect(self.update_feishu_bitable_tables)
         self.signal_update_data_tables.connect(self.feishu_client.get_data_tables)
         self.pushButton_RefreshDataTable.clicked.connect(self.update_feishu_bitable_url)
         self.feishu_client.signal_init_finish.connect(self.check_feishu_client_state)
+
+        # jobs
+        self.signal_job_sync_defects.connect(self.runner.sync_code_beamer_defect_to_feishu)
 
     def update_cb_username(self):
         self.cb_username = self.lineEdit_Username.text()

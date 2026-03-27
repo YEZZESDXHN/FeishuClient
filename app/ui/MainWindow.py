@@ -17,21 +17,33 @@ from PySide6.QtGui import (QBrush, QColor, QConicalGradient, QCursor,
     QPalette, QPixmap, QRadialGradient, QTransform)
 from PySide6.QtWidgets import (QApplication, QComboBox, QGroupBox, QHBoxLayout,
     QLabel, QLineEdit, QMainWindow, QMenuBar,
-    QPushButton, QSizePolicy, QSpacerItem, QStatusBar,
+    QPushButton, QSizePolicy, QSpacerItem, QTabWidget,
     QTextEdit, QVBoxLayout, QWidget)
 
 class Ui_MainWindow(object):
     def setupUi(self, MainWindow):
         if not MainWindow.objectName():
             MainWindow.setObjectName(u"MainWindow")
-        MainWindow.resize(585, 502)
+        MainWindow.resize(740, 425)
         self.centralwidget = QWidget(MainWindow)
         self.centralwidget.setObjectName(u"centralwidget")
-        self.verticalLayout_4 = QVBoxLayout(self.centralwidget)
+        self.verticalLayout_6 = QVBoxLayout(self.centralwidget)
+        self.verticalLayout_6.setSpacing(6)
+        self.verticalLayout_6.setObjectName(u"verticalLayout_6")
+        self.verticalLayout_6.setContentsMargins(9, 9, 9, 9)
+        self.tabWidget = QTabWidget(self.centralwidget)
+        self.tabWidget.setObjectName(u"tabWidget")
+        self.tab_2 = QWidget()
+        self.tab_2.setObjectName(u"tab_2")
+        self.verticalLayout_5 = QVBoxLayout(self.tab_2)
+        self.verticalLayout_5.setSpacing(6)
+        self.verticalLayout_5.setObjectName(u"verticalLayout_5")
+        self.verticalLayout_5.setContentsMargins(9, 9, 9, 9)
+        self.verticalLayout_4 = QVBoxLayout()
         self.verticalLayout_4.setObjectName(u"verticalLayout_4")
         self.horizontalLayout_12 = QHBoxLayout()
         self.horizontalLayout_12.setObjectName(u"horizontalLayout_12")
-        self.groupBox_2 = QGroupBox(self.centralwidget)
+        self.groupBox_2 = QGroupBox(self.tab_2)
         self.groupBox_2.setObjectName(u"groupBox_2")
         sizePolicy = QSizePolicy(QSizePolicy.Policy.Preferred, QSizePolicy.Policy.Preferred)
         sizePolicy.setHorizontalStretch(0)
@@ -96,68 +108,23 @@ class Ui_MainWindow(object):
 
         self.horizontalLayout_7.addItem(self.horizontalSpacer_2)
 
-        self.pushButton_FeishuTest = QPushButton(self.groupBox_2)
-        self.pushButton_FeishuTest.setObjectName(u"pushButton_FeishuTest")
+        self.pushButton_FeishuClient = QPushButton(self.groupBox_2)
+        self.pushButton_FeishuClient.setObjectName(u"pushButton_FeishuClient")
 
-        self.horizontalLayout_7.addWidget(self.pushButton_FeishuTest)
+        self.horizontalLayout_7.addWidget(self.pushButton_FeishuClient)
+
+        self.pushButton_FeishuWsClient = QPushButton(self.groupBox_2)
+        self.pushButton_FeishuWsClient.setObjectName(u"pushButton_FeishuWsClient")
+
+        self.horizontalLayout_7.addWidget(self.pushButton_FeishuWsClient)
 
 
         self.verticalLayout_2.addLayout(self.horizontalLayout_7)
 
-        self.horizontalLayout_5 = QHBoxLayout()
-        self.horizontalLayout_5.setObjectName(u"horizontalLayout_5")
-        self.label_5 = QLabel(self.groupBox_2)
-        self.label_5.setObjectName(u"label_5")
-        sizePolicy1.setHeightForWidth(self.label_5.sizePolicy().hasHeightForWidth())
-        self.label_5.setSizePolicy(sizePolicy1)
-        self.label_5.setMinimumSize(QSize(75, 20))
-
-        self.horizontalLayout_5.addWidget(self.label_5)
-
-        self.lineEdit_BitableUrl = QLineEdit(self.groupBox_2)
-        self.lineEdit_BitableUrl.setObjectName(u"lineEdit_BitableUrl")
-        sizePolicy2.setHeightForWidth(self.lineEdit_BitableUrl.sizePolicy().hasHeightForWidth())
-        self.lineEdit_BitableUrl.setSizePolicy(sizePolicy2)
-        self.lineEdit_BitableUrl.setMinimumSize(QSize(120, 0))
-
-        self.horizontalLayout_5.addWidget(self.lineEdit_BitableUrl)
-
-
-        self.verticalLayout_2.addLayout(self.horizontalLayout_5)
-
-        self.horizontalLayout_8 = QHBoxLayout()
-        self.horizontalLayout_8.setObjectName(u"horizontalLayout_8")
-        self.label_6 = QLabel(self.groupBox_2)
-        self.label_6.setObjectName(u"label_6")
-        sizePolicy1.setHeightForWidth(self.label_6.sizePolicy().hasHeightForWidth())
-        self.label_6.setSizePolicy(sizePolicy1)
-        self.label_6.setMinimumSize(QSize(75, 20))
-
-        self.horizontalLayout_8.addWidget(self.label_6)
-
-        self.comboBox_BitableDateTable = QComboBox(self.groupBox_2)
-        self.comboBox_BitableDateTable.setObjectName(u"comboBox_BitableDateTable")
-        sizePolicy2.setHeightForWidth(self.comboBox_BitableDateTable.sizePolicy().hasHeightForWidth())
-        self.comboBox_BitableDateTable.setSizePolicy(sizePolicy2)
-        self.comboBox_BitableDateTable.setEditable(False)
-
-        self.horizontalLayout_8.addWidget(self.comboBox_BitableDateTable)
-
-        self.pushButton_RefreshDataTable = QPushButton(self.groupBox_2)
-        self.pushButton_RefreshDataTable.setObjectName(u"pushButton_RefreshDataTable")
-        sizePolicy1.setHeightForWidth(self.pushButton_RefreshDataTable.sizePolicy().hasHeightForWidth())
-        self.pushButton_RefreshDataTable.setSizePolicy(sizePolicy1)
-        self.pushButton_RefreshDataTable.setMaximumSize(QSize(50, 16777215))
-
-        self.horizontalLayout_8.addWidget(self.pushButton_RefreshDataTable)
-
-
-        self.verticalLayout_2.addLayout(self.horizontalLayout_8)
-
 
         self.horizontalLayout_12.addWidget(self.groupBox_2)
 
-        self.groupBox = QGroupBox(self.centralwidget)
+        self.groupBox = QGroupBox(self.tab_2)
         self.groupBox.setObjectName(u"groupBox")
         sizePolicy.setHeightForWidth(self.groupBox.sizePolicy().hasHeightForWidth())
         self.groupBox.setSizePolicy(sizePolicy)
@@ -221,32 +188,95 @@ class Ui_MainWindow(object):
 
         self.verticalLayout.addLayout(self.horizontalLayout_6)
 
-        self.verticalSpacer = QSpacerItem(20, 40, QSizePolicy.Policy.Minimum, QSizePolicy.Policy.Expanding)
-
-        self.verticalLayout.addItem(self.verticalSpacer)
-
 
         self.horizontalLayout_12.addWidget(self.groupBox)
 
 
         self.verticalLayout_4.addLayout(self.horizontalLayout_12)
 
+        self.verticalLayout_3 = QVBoxLayout()
+        self.verticalLayout_3.setObjectName(u"verticalLayout_3")
+        self.horizontalLayout_5 = QHBoxLayout()
+        self.horizontalLayout_5.setObjectName(u"horizontalLayout_5")
+        self.label_5 = QLabel(self.tab_2)
+        self.label_5.setObjectName(u"label_5")
+        sizePolicy1.setHeightForWidth(self.label_5.sizePolicy().hasHeightForWidth())
+        self.label_5.setSizePolicy(sizePolicy1)
+        self.label_5.setMinimumSize(QSize(75, 20))
+
+        self.horizontalLayout_5.addWidget(self.label_5)
+
+        self.lineEdit_BitableUrl = QLineEdit(self.tab_2)
+        self.lineEdit_BitableUrl.setObjectName(u"lineEdit_BitableUrl")
+        sizePolicy2.setHeightForWidth(self.lineEdit_BitableUrl.sizePolicy().hasHeightForWidth())
+        self.lineEdit_BitableUrl.setSizePolicy(sizePolicy2)
+        self.lineEdit_BitableUrl.setMinimumSize(QSize(120, 0))
+
+        self.horizontalLayout_5.addWidget(self.lineEdit_BitableUrl)
+
+
+        self.verticalLayout_3.addLayout(self.horizontalLayout_5)
+
+        self.horizontalLayout_8 = QHBoxLayout()
+        self.horizontalLayout_8.setObjectName(u"horizontalLayout_8")
+        self.label_6 = QLabel(self.tab_2)
+        self.label_6.setObjectName(u"label_6")
+        sizePolicy1.setHeightForWidth(self.label_6.sizePolicy().hasHeightForWidth())
+        self.label_6.setSizePolicy(sizePolicy1)
+        self.label_6.setMinimumSize(QSize(75, 20))
+
+        self.horizontalLayout_8.addWidget(self.label_6)
+
+        self.comboBox_BitableDateTable = QComboBox(self.tab_2)
+        self.comboBox_BitableDateTable.setObjectName(u"comboBox_BitableDateTable")
+        sizePolicy2.setHeightForWidth(self.comboBox_BitableDateTable.sizePolicy().hasHeightForWidth())
+        self.comboBox_BitableDateTable.setSizePolicy(sizePolicy2)
+        self.comboBox_BitableDateTable.setEditable(False)
+
+        self.horizontalLayout_8.addWidget(self.comboBox_BitableDateTable)
+
+        self.pushButton_RefreshDataTable = QPushButton(self.tab_2)
+        self.pushButton_RefreshDataTable.setObjectName(u"pushButton_RefreshDataTable")
+        sizePolicy1.setHeightForWidth(self.pushButton_RefreshDataTable.sizePolicy().hasHeightForWidth())
+        self.pushButton_RefreshDataTable.setSizePolicy(sizePolicy1)
+        self.pushButton_RefreshDataTable.setMaximumSize(QSize(50, 16777215))
+
+        self.horizontalLayout_8.addWidget(self.pushButton_RefreshDataTable)
+
+
+        self.verticalLayout_3.addLayout(self.horizontalLayout_8)
+
+
+        self.verticalLayout_4.addLayout(self.verticalLayout_3)
+
+
+        self.verticalLayout_5.addLayout(self.verticalLayout_4)
+
+        self.tabWidget.addTab(self.tab_2, "")
+        self.tab_scheduler = QWidget()
+        self.tab_scheduler.setObjectName(u"tab_scheduler")
+        self.verticalLayout_7 = QVBoxLayout(self.tab_scheduler)
+        self.verticalLayout_7.setObjectName(u"verticalLayout_7")
+        self.tabWidget.addTab(self.tab_scheduler, "")
+
+        self.verticalLayout_6.addWidget(self.tabWidget)
+
         self.textEdit = QTextEdit(self.centralwidget)
         self.textEdit.setObjectName(u"textEdit")
 
-        self.verticalLayout_4.addWidget(self.textEdit)
+        self.verticalLayout_6.addWidget(self.textEdit)
 
-        self.verticalLayout_4.setStretch(1, 1)
+        self.verticalLayout_6.setStretch(1, 1)
         MainWindow.setCentralWidget(self.centralwidget)
         self.menubar = QMenuBar(MainWindow)
         self.menubar.setObjectName(u"menubar")
-        self.menubar.setGeometry(QRect(0, 0, 585, 33))
+        self.menubar.setGeometry(QRect(0, 0, 740, 33))
         MainWindow.setMenuBar(self.menubar)
-        self.statusbar = QStatusBar(MainWindow)
-        self.statusbar.setObjectName(u"statusbar")
-        MainWindow.setStatusBar(self.statusbar)
 
         self.retranslateUi(MainWindow)
+
+        self.tabWidget.setCurrentIndex(0)
+
 
         QMetaObject.connectSlotsByName(MainWindow)
     # setupUi
@@ -256,13 +286,16 @@ class Ui_MainWindow(object):
         self.groupBox_2.setTitle(QCoreApplication.translate("MainWindow", u"\u98de\u4e66", None))
         self.label_3.setText(QCoreApplication.translate("MainWindow", u"App ID\uff1a", None))
         self.label_4.setText(QCoreApplication.translate("MainWindow", u"App Secret\uff1a", None))
-        self.pushButton_FeishuTest.setText(QCoreApplication.translate("MainWindow", u"\u6d4b\u8bd5", None))
-        self.label_5.setText(QCoreApplication.translate("MainWindow", u"\u591a\u7ef4\u8868\u683c\uff1a", None))
-        self.label_6.setText(QCoreApplication.translate("MainWindow", u"\u6570\u636e\u8868", None))
-        self.pushButton_RefreshDataTable.setText(QCoreApplication.translate("MainWindow", u"\u5237\u65b0", None))
+        self.pushButton_FeishuClient.setText(QCoreApplication.translate("MainWindow", u"\u521d\u59cb\u5316", None))
+        self.pushButton_FeishuWsClient.setText(QCoreApplication.translate("MainWindow", u"\u957f\u8fde\u63a5", None))
         self.groupBox.setTitle(QCoreApplication.translate("MainWindow", u"CodeBearm", None))
         self.label.setText(QCoreApplication.translate("MainWindow", u"\u8d26\u53f7\uff1a", None))
         self.label_2.setText(QCoreApplication.translate("MainWindow", u"\u5bc6\u7801\uff1a", None))
         self.pushButton_CBTest.setText(QCoreApplication.translate("MainWindow", u"\u6d4b\u8bd5", None))
+        self.label_5.setText(QCoreApplication.translate("MainWindow", u"\u591a\u7ef4\u8868\u683c\uff1a", None))
+        self.label_6.setText(QCoreApplication.translate("MainWindow", u"\u6570\u636e\u8868", None))
+        self.pushButton_RefreshDataTable.setText(QCoreApplication.translate("MainWindow", u"\u5237\u65b0", None))
+        self.tabWidget.setTabText(self.tabWidget.indexOf(self.tab_2), QCoreApplication.translate("MainWindow", u"\u914d\u7f6e", None))
+        self.tabWidget.setTabText(self.tabWidget.indexOf(self.tab_scheduler), QCoreApplication.translate("MainWindow", u"\u4efb\u52a1", None))
     # retranslateUi
 

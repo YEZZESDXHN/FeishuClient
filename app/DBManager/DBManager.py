@@ -8,6 +8,8 @@ logger = logging.getLogger('FeishuClient.' + __name__)
 
 DEFECTS_TABLE_NAME = 'cb_defects'
 INFO_TABLE_NAME = 'info'
+SCHEDULER_TABLE_NAME = 'scheduler'
+EMAIL_CONTACTS_TABLE_NAME = 'email_contacts'
 
 
 class DBBase:
@@ -74,6 +76,78 @@ class DBBase:
             logger.exception(f"DQL查询失败：sql={sql[:100]}..., params={params}, error={str(e)}")
             return []
 
+
+class SchedulerDB(DBBase):
+    def __init__(self, db_path: str):
+        super().__init__(db_path)
+        self.table_name = SCHEDULER_TABLE_NAME
+        self.safe_table = self._safe_table_name(self.table_name)
+        self.init_database()
+
+    def init_database(self) -> bool:
+        """初始化表结构：增加 job_name 以便 UI 显示"""
+        create_sql = f"""
+            CREATE TABLE IF NOT EXISTS {self.safe_table} (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                job_id TEXT UNIQUE NOT NULL,  -- APScheduler 用的字符串 ID
+                job_name TEXT,                 -- 友好名称
+                job_type TEXT NOT NULL,       -- interval, cron, date
+                job_param TEXT NOT NULL,      -- 具体的间隔秒数或 cron 表达式
+                created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+            )
+        """
+        return self.execute_ddl(create_sql)
+
+    def add_job_record(self, job_id: str, job_name: str, job_type: str, job_param: str) -> bool:
+        """
+        向数据库添加一条任务记录
+        """
+        sql = f"""
+            INSERT INTO {self.safe_table} (job_id, job_name, job_type, job_param)
+            VALUES (?, ?, ?, ?)
+        """
+        params = (job_id, job_name, job_type, job_param)
+        # execute_dml 返回受影响行数，1 表示成功插入
+        result = self.execute_dml(sql, params)
+        return result is not None and result > 0
+
+    def get_all_jobs(self) -> list[dict]:
+        """
+        获取所有任务，用于程序启动时重新加载到 APScheduler
+        """
+        sql = f"SELECT * FROM {self.safe_table} ORDER BY id DESC"
+        return self.execute_dql(sql)
+
+    def get_job_by_id(self, job_id: str) -> Optional[dict]:
+        """
+        根据 APScheduler 的字符串 ID 查询
+        """
+        sql = f"SELECT * FROM {self.safe_table} WHERE job_id = ?"
+        results = self.execute_dql(sql, (job_id,))
+        return results[0] if results else None
+
+    def delete_job_by_job_id(self, job_id: str) -> bool:
+        """
+        根据 APScheduler 的任务 ID 删除记录
+        """
+        if not job_id:
+            return False
+
+        sql = f"DELETE FROM {self.safe_table} WHERE job_id = ?"
+        rowcount = self.execute_dml(sql, (job_id,))
+
+        if rowcount and rowcount >= 1:
+            logger.info(f"数据库记录删除成功: job_id={job_id}")
+            return True
+        return False
+
+    def update_job_param(self, job_id: str, new_param: str) -> bool:
+        """
+        更新现有任务的参数（比如修改了执行频率）
+        """
+        sql = f"UPDATE {self.safe_table} SET job_param = ? WHERE job_id = ?"
+        rowcount = self.execute_dml(sql, (new_param, job_id))
+        return rowcount is not None and rowcount > 0
 
 class InfoDB(DBBase):
     def __init__(self, db_path: str):
@@ -279,9 +353,62 @@ class DefectsDB(DBBase):
         return self.execute_ddl(sql)
 
 
+class EmailDB(DBBase):
+    def __init__(self, db_path: str):
+        super().__init__(db_path)
+        self.table_name = EMAIL_CONTACTS_TABLE_NAME
+        self.safe_table = self._safe_table_name(self.table_name)
+        self.init_database()
+
+    def init_database(self) -> bool:
+        """
+        初始化表：short_name 作为主键，email 为联系方式
+        """
+        create_sql = f"""
+            CREATE TABLE IF NOT EXISTS {self.safe_table} (
+                short_name TEXT PRIMARY KEY, 
+                email TEXT NOT NULL
+            )
+        """
+        return self.execute_ddl(create_sql)
+
+    def add_or_update_email(self, short_name: str, email: str) -> bool:
+        """
+        添加或更新邮件记录（使用 REPLACE 语法：如果主键冲突则覆盖）
+        """
+        sql = f"REPLACE INTO {self.safe_table} (short_name, email) VALUES (?, ?)"
+        rowcount = self.execute_dml(sql, (short_name, email))
+        return rowcount is not None and rowcount > 0
+
+    def get_email_by_name(self, short_name: str) -> Optional[str]:
+        """
+        根据简称获取邮箱地址
+        """
+        sql = f"SELECT email FROM {self.safe_table} WHERE short_name = ?"
+        results = self.execute_dql(sql, (short_name,))
+        return results[0]['email'] if results else None
+
+    def get_all_emails(self) -> list[dict]:
+        """
+        获取所有联系人清单
+        """
+        sql = f"SELECT * FROM {self.safe_table} ORDER BY short_name ASC"
+        return self.execute_dql(sql)
+
+    def delete_email_by_name(self, short_name: str) -> bool:
+        """
+        根据简称删除记录
+        """
+        sql = f"DELETE FROM {self.safe_table} WHERE short_name = ?"
+        rowcount = self.execute_dml(sql, (short_name,))
+        return rowcount is not None and rowcount > 0
+
+
 class DBManager:
     def __init__(self, db_path: str):
         self.db_path = db_path
         self.defects_db: DefectsDB = DefectsDB(self.db_path)
         self.info_db: InfoDB = InfoDB(self.db_path)
+        self.scheduler_db: SchedulerDB = SchedulerDB(self.db_path)
+        self.email_db: EmailDB = EmailDB(self.db_path)
 
