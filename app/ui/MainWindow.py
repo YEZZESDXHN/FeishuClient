@@ -17,29 +17,26 @@ from PySide6.QtGui import (QBrush, QColor, QConicalGradient, QCursor,
     QPalette, QPixmap, QRadialGradient, QTransform)
 from PySide6.QtWidgets import (QApplication, QComboBox, QGroupBox, QHBoxLayout,
     QLabel, QLineEdit, QMainWindow, QMenuBar,
-    QPushButton, QSizePolicy, QSpacerItem, QTabWidget,
-    QTextEdit, QVBoxLayout, QWidget)
+    QPushButton, QSizePolicy, QSpacerItem, QSplitter,
+    QTabWidget, QTextEdit, QVBoxLayout, QWidget)
 
 class Ui_MainWindow(object):
     def setupUi(self, MainWindow):
         if not MainWindow.objectName():
             MainWindow.setObjectName(u"MainWindow")
-        MainWindow.resize(740, 425)
+        MainWindow.resize(697, 468)
         self.centralwidget = QWidget(MainWindow)
         self.centralwidget.setObjectName(u"centralwidget")
-        self.verticalLayout_6 = QVBoxLayout(self.centralwidget)
-        self.verticalLayout_6.setSpacing(6)
-        self.verticalLayout_6.setObjectName(u"verticalLayout_6")
-        self.verticalLayout_6.setContentsMargins(9, 9, 9, 9)
-        self.tabWidget = QTabWidget(self.centralwidget)
+        self.verticalLayout_5 = QVBoxLayout(self.centralwidget)
+        self.verticalLayout_5.setObjectName(u"verticalLayout_5")
+        self.splitter = QSplitter(self.centralwidget)
+        self.splitter.setObjectName(u"splitter")
+        self.splitter.setOrientation(Qt.Orientation.Vertical)
+        self.tabWidget = QTabWidget(self.splitter)
         self.tabWidget.setObjectName(u"tabWidget")
         self.tab_2 = QWidget()
         self.tab_2.setObjectName(u"tab_2")
-        self.verticalLayout_5 = QVBoxLayout(self.tab_2)
-        self.verticalLayout_5.setSpacing(6)
-        self.verticalLayout_5.setObjectName(u"verticalLayout_5")
-        self.verticalLayout_5.setContentsMargins(9, 9, 9, 9)
-        self.verticalLayout_4 = QVBoxLayout()
+        self.verticalLayout_4 = QVBoxLayout(self.tab_2)
         self.verticalLayout_4.setObjectName(u"verticalLayout_4")
         self.horizontalLayout_12 = QHBoxLayout()
         self.horizontalLayout_12.setObjectName(u"horizontalLayout_12")
@@ -249,8 +246,41 @@ class Ui_MainWindow(object):
 
         self.verticalLayout_4.addLayout(self.verticalLayout_3)
 
+        self.horizontalLayout_9 = QHBoxLayout()
+        self.horizontalLayout_9.setObjectName(u"horizontalLayout_9")
+        self.label_7 = QLabel(self.tab_2)
+        self.label_7.setObjectName(u"label_7")
 
-        self.verticalLayout_5.addLayout(self.verticalLayout_4)
+        self.horizontalLayout_9.addWidget(self.label_7)
+
+        self.comboBox_ManualTrigger = QComboBox(self.tab_2)
+        self.comboBox_ManualTrigger.addItem("")
+        self.comboBox_ManualTrigger.addItem("")
+        self.comboBox_ManualTrigger.addItem("")
+        self.comboBox_ManualTrigger.addItem("")
+        self.comboBox_ManualTrigger.addItem("")
+        self.comboBox_ManualTrigger.addItem("")
+        self.comboBox_ManualTrigger.setObjectName(u"comboBox_ManualTrigger")
+        self.comboBox_ManualTrigger.setEnabled(True)
+        sizePolicy2.setHeightForWidth(self.comboBox_ManualTrigger.sizePolicy().hasHeightForWidth())
+        self.comboBox_ManualTrigger.setSizePolicy(sizePolicy2)
+
+        self.horizontalLayout_9.addWidget(self.comboBox_ManualTrigger)
+
+        self.pushButton_ManualTrigger = QPushButton(self.tab_2)
+        self.pushButton_ManualTrigger.setObjectName(u"pushButton_ManualTrigger")
+        self.pushButton_ManualTrigger.setEnabled(False)
+        sizePolicy1.setHeightForWidth(self.pushButton_ManualTrigger.sizePolicy().hasHeightForWidth())
+        self.pushButton_ManualTrigger.setSizePolicy(sizePolicy1)
+
+        self.horizontalLayout_9.addWidget(self.pushButton_ManualTrigger)
+
+
+        self.verticalLayout_4.addLayout(self.horizontalLayout_9)
+
+        self.verticalSpacer = QSpacerItem(20, 0, QSizePolicy.Policy.Minimum, QSizePolicy.Policy.Expanding)
+
+        self.verticalLayout_4.addItem(self.verticalSpacer)
 
         self.tabWidget.addTab(self.tab_2, "")
         self.tab_scheduler = QWidget()
@@ -258,19 +288,17 @@ class Ui_MainWindow(object):
         self.verticalLayout_7 = QVBoxLayout(self.tab_scheduler)
         self.verticalLayout_7.setObjectName(u"verticalLayout_7")
         self.tabWidget.addTab(self.tab_scheduler, "")
-
-        self.verticalLayout_6.addWidget(self.tabWidget)
-
-        self.textEdit = QTextEdit(self.centralwidget)
+        self.splitter.addWidget(self.tabWidget)
+        self.textEdit = QTextEdit(self.splitter)
         self.textEdit.setObjectName(u"textEdit")
+        self.splitter.addWidget(self.textEdit)
 
-        self.verticalLayout_6.addWidget(self.textEdit)
+        self.verticalLayout_5.addWidget(self.splitter)
 
-        self.verticalLayout_6.setStretch(1, 1)
         MainWindow.setCentralWidget(self.centralwidget)
         self.menubar = QMenuBar(MainWindow)
         self.menubar.setObjectName(u"menubar")
-        self.menubar.setGeometry(QRect(0, 0, 740, 33))
+        self.menubar.setGeometry(QRect(0, 0, 697, 22))
         MainWindow.setMenuBar(self.menubar)
 
         self.retranslateUi(MainWindow)
@@ -295,6 +323,15 @@ class Ui_MainWindow(object):
         self.label_5.setText(QCoreApplication.translate("MainWindow", u"\u591a\u7ef4\u8868\u683c\uff1a", None))
         self.label_6.setText(QCoreApplication.translate("MainWindow", u"\u6570\u636e\u8868", None))
         self.pushButton_RefreshDataTable.setText(QCoreApplication.translate("MainWindow", u"\u5237\u65b0", None))
+        self.label_7.setText(QCoreApplication.translate("MainWindow", u"\u624b\u52a8\u89e6\u53d1\u4efb\u52a1\uff1a", None))
+        self.comboBox_ManualTrigger.setItemText(0, QCoreApplication.translate("MainWindow", u"\u540c\u6b65Defects", None))
+        self.comboBox_ManualTrigger.setItemText(1, QCoreApplication.translate("MainWindow", u"\u7ed9\u6d4b\u8bd5\u56e2\u961f\u53d1\u9001assigned\u7968\u901a\u77e5", None))
+        self.comboBox_ManualTrigger.setItemText(2, QCoreApplication.translate("MainWindow", u"\u7ed9\u7cfb\u7edf\u56e2\u961f\u53d1\u9001assigned\u7968\u901a\u77e5", None))
+        self.comboBox_ManualTrigger.setItemText(3, QCoreApplication.translate("MainWindow", u"\u7ed9\u5f00\u53d1\u56e2\u961f\u53d1\u9001assigned\u7968\u901a\u77e5", None))
+        self.comboBox_ManualTrigger.setItemText(4, QCoreApplication.translate("MainWindow", u"\u4eca\u65e5\u65b0\u589e\u7968\u901a\u77e5", None))
+        self.comboBox_ManualTrigger.setItemText(5, QCoreApplication.translate("MainWindow", u"\u6628\u65e5\u65b0\u589e\u7968\u901a\u77e5", None))
+
+        self.pushButton_ManualTrigger.setText(QCoreApplication.translate("MainWindow", u"\u8fd0\u884c", None))
         self.tabWidget.setTabText(self.tabWidget.indexOf(self.tab_2), QCoreApplication.translate("MainWindow", u"\u914d\u7f6e", None))
         self.tabWidget.setTabText(self.tabWidget.indexOf(self.tab_scheduler), QCoreApplication.translate("MainWindow", u"\u4efb\u52a1", None))
     # retranslateUi

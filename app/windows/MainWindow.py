@@ -155,6 +155,21 @@ class QRunner(QObject):
             feishu_items.append(feishu_item)
         return feishu_items
 
+    def send_assigned_to_test_notify(self):
+        pass
+
+    def send_assigned_to_sys_notify(self):
+        pass
+
+    def send_assigned_to_sw_notify(self):
+        pass
+
+    def send_added_today_notify(self):
+        pass
+
+    def send_added_yesterday_notify(self):
+        pass
+
     def sync_code_beamer_defect_to_feishu(self):
         code_beamer_client = self.parent.cb_client
         feishu_client = self.parent.feishu_client
@@ -245,10 +260,21 @@ class MainWindow(QMainWindow, Ui_MainWindow):
     signal_update_data_tables = Signal(str)
 
     signal_job_sync_defects = Signal()
+    signal_job_send_assigned_to_test_notify = Signal()
+    signal_job_send_assigned_to_sys_notify = Signal()
+    signal_job_send_assigned_to_sw_notify = Signal()
+    signal_job_send_added_today_notify = Signal()
+    signal_job_send_added_yesterday_notify = Signal()
+
     def __init__(self):
         super().__init__()
         self.job_name_map = {
-            "同步Defects": self.signal_job_sync_defects
+            "同步Defects": self.signal_job_sync_defects,
+            '给测试团队发送assigned票通知': self.signal_job_send_assigned_to_test_notify,
+            "给系统团队发送assigned票通知": self.signal_job_send_assigned_to_sys_notify,
+            "给开发团队发送assigned票通知": self.signal_job_send_assigned_to_sw_notify,
+            "今日新增票通知": self.signal_job_send_added_today_notify,
+            "昨日新增票通知": self.signal_job_send_added_yesterday_notify,
         }
         self.setupUi(self)
         self.scheduler = QtScheduler()
@@ -284,11 +310,10 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         self.signal_connect()
         self.init_ui()
 
-    def setup_ig_panel(self):
+    def setup_scheduler_jobs_table(self):
         layout = self.tab_scheduler.layout()
         if not layout:
             layout = QVBoxLayout(self.tab_scheduler)
-            layout.setSpacing(15)  # 控件之间的间距
 
         self.scheduler_jobs_table = SchedulerJobsTable(parent=self)
         layout.addWidget(self.scheduler_jobs_table)
@@ -384,7 +409,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
             )
 
     def init_ui(self):
-        self.setup_ig_panel()
+        self.setup_scheduler_jobs_table()
         self.pushButton_FeishuClient.setIcon(IconEngine.get_icon('unlink', 'red'))
         self.pushButton_FeishuWsClient.setIcon(IconEngine.get_icon('unlink', 'red'))
 
@@ -439,7 +464,9 @@ class MainWindow(QMainWindow, Ui_MainWindow):
             self.feishu_client_state = True
             self.pushButton_RefreshDataTable.setDisabled(False)
             self.comboBox_BitableDateTable.setDisabled(False)
+            self.pushButton_ManualTrigger.setDisabled(False)
             self.pushButton_FeishuClient.setIcon(IconEngine.get_icon('link', 'green'))
+            self.pushButton_RefreshDataTable.clicked.emit()
 
     def _runner_init(self):
         self.runner_thread = QThread()
@@ -465,22 +492,32 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         self.feishu_ws_client.moveToThread(self.feishu_ws_client_thread)
         self.feishu_ws_client_thread.start()
 
+    def manual_trigger_job(self):
+        job_name = self.comboBox_ManualTrigger.currentText()
+        if job_name in self.job_name_map:
+            self.job_name_map[job_name].emit()
+
     def signal_connect(self):
         self.lineEdit_Username.editingFinished.connect(self.update_cb_username)
         self.lineEdit_Password.editingFinished.connect(self.update_cb_password)
         self.lineEdit_AppID.editingFinished.connect(self.update_feishu_app_id)
         self.lineEdit_AppSecret.editingFinished.connect(self.update_feishu_secret)
         self.lineEdit_BitableUrl.editingFinished.connect(self.update_feishu_bitable_url)
-        self.pushButton_CBTest.clicked.connect(self.runner.sync_code_beamer_defect_to_feishu)
         self.pushButton_FeishuClient.clicked.connect(self.feishu_client.client_init)
         self.pushButton_FeishuWsClient.clicked.connect(self.feishu_ws_client.ws_client_start)
         self.feishu_client.signal_data_tables.connect(self.update_feishu_bitable_tables)
         self.signal_update_data_tables.connect(self.feishu_client.get_data_tables)
         self.pushButton_RefreshDataTable.clicked.connect(self.update_feishu_bitable_url)
         self.feishu_client.signal_init_finish.connect(self.check_feishu_client_state)
+        self.pushButton_ManualTrigger.clicked.connect(self.manual_trigger_job)
 
         # jobs
         self.signal_job_sync_defects.connect(self.runner.sync_code_beamer_defect_to_feishu)
+        self.signal_job_send_assigned_to_test_notify.connect(self.runner.send_assigned_to_test_notify)
+        self.signal_job_send_assigned_to_sys_notify.connect(self.runner.send_assigned_to_sys_notify)
+        self.signal_job_send_assigned_to_sw_notify.connect(self.runner.send_assigned_to_sw_notify)
+        self.signal_job_send_added_today_notify.connect(self.runner.send_added_today_notify)
+        self.signal_job_send_added_yesterday_notify.connect(self.runner.send_added_yesterday_notify)
 
     def update_cb_username(self):
         self.cb_username = self.lineEdit_Username.text()
@@ -506,10 +543,17 @@ class MainWindow(QMainWindow, Ui_MainWindow):
 
     def update_feishu_bitable_url(self):
         self.feishu_bitable_url = self.lineEdit_BitableUrl.text()
+        if not self.feishu_bitable_url:
+            return
+        self.db_manager.info_db.update_single_field(field_name='feishu_bitable_url', value=self.feishu_bitable_url)
         self.feishu_bitable_app_token = self.feishu_client.bitable_api.get_feishu_app_token(self.feishu_bitable_url)
+        if not self.feishu_bitable_app_token:
+            return
         if self.feishu_client_state:
             self.signal_update_data_tables.emit(self.feishu_bitable_app_token)
-        self.db_manager.info_db.update_single_field(field_name='feishu_bitable_url', value=self.feishu_bitable_url)
+        else:
+            return
+
 
 
     def update_feishu_bitable_tables(self, tables: list):

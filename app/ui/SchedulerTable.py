@@ -23,7 +23,7 @@ class Ui_SchedulerJobsTable(object):
     def setupUi(self, SchedulerJobsTable):
         if not SchedulerJobsTable.objectName():
             SchedulerJobsTable.setObjectName(u"SchedulerJobsTable")
-        SchedulerJobsTable.resize(438, 301)
+        SchedulerJobsTable.resize(438, 109)
         self.verticalLayout = QVBoxLayout(SchedulerJobsTable)
         self.verticalLayout.setObjectName(u"verticalLayout")
         self.verticalLayout.setContentsMargins(3, 3, 3, 3)
@@ -33,16 +33,6 @@ class Ui_SchedulerJobsTable(object):
         self.pushButton_AddJob.setObjectName(u"pushButton_AddJob")
 
         self.horizontalLayout_9.addWidget(self.pushButton_AddJob)
-
-        self.pushButton_DelJob = QPushButton(SchedulerJobsTable)
-        self.pushButton_DelJob.setObjectName(u"pushButton_DelJob")
-
-        self.horizontalLayout_9.addWidget(self.pushButton_DelJob)
-
-        self.pushButton_EditJob = QPushButton(SchedulerJobsTable)
-        self.pushButton_EditJob.setObjectName(u"pushButton_EditJob")
-
-        self.horizontalLayout_9.addWidget(self.pushButton_EditJob)
 
         self.horizontalSpacer_3 = QSpacerItem(40, 20, QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Minimum)
 
@@ -65,7 +55,5 @@ class Ui_SchedulerJobsTable(object):
     def retranslateUi(self, SchedulerJobsTable):
         SchedulerJobsTable.setWindowTitle(QCoreApplication.translate("SchedulerJobsTable", u"Form", None))
         self.pushButton_AddJob.setText(QCoreApplication.translate("SchedulerJobsTable", u"\u65b0\u5efa", None))
-        self.pushButton_DelJob.setText(QCoreApplication.translate("SchedulerJobsTable", u"\u5220\u9664", None))
-        self.pushButton_EditJob.setText(QCoreApplication.translate("SchedulerJobsTable", u"\u4fee\u6539", None))
     # retranslateUi
 

@@ -7,7 +7,7 @@
     <x>0</x>
     <y>0</y>
     <width>438</width>
-    <height>301</height>
+    <height>109</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -32,20 +32,6 @@
       <widget class="QPushButton" name="pushButton_AddJob">
        <property name="text">
         <string>新建</string>
-       </property>
-      </widget>
-     </item>
-     <item>
-      <widget class="QPushButton" name="pushButton_DelJob">
-       <property name="text">
-        <string>删除</string>
-       </property>
-      </widget>
-     </item>
-     <item>
-      <widget class="QPushButton" name="pushButton_EditJob">
-       <property name="text">
-        <string>修改</string>
        </property>
       </widget>
      </item>
