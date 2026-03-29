@@ -40,7 +40,6 @@ class Ui_SchedulerEdit(object):
         self.horizontalLayout_2.addWidget(self.label_2)
 
         self.comboBox_JobName = QComboBox(SchedulerEdit)
-        self.comboBox_JobName.addItem("")
         self.comboBox_JobName.setObjectName(u"comboBox_JobName")
 
         self.horizontalLayout_2.addWidget(self.comboBox_JobName)
@@ -134,8 +133,6 @@ class Ui_SchedulerEdit(object):
     def retranslateUi(self, SchedulerEdit):
         SchedulerEdit.setWindowTitle(QCoreApplication.translate("SchedulerEdit", u"Dialog", None))
         self.label_2.setText(QCoreApplication.translate("SchedulerEdit", u"job_name", None))
-        self.comboBox_JobName.setItemText(0, QCoreApplication.translate("SchedulerEdit", u"\u540c\u6b65Defects", None))
-
         self.label.setText(QCoreApplication.translate("SchedulerEdit", u"job_id", None))
         self.label_3.setText(QCoreApplication.translate("SchedulerEdit", u"job_type", None))
         self.comboBox_JobType.setItemText(0, QCoreApplication.translate("SchedulerEdit", u"cron", None))

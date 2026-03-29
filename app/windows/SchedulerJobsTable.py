@@ -1,4 +1,5 @@
 import uuid
+# from typing import TYPE_CHECKING
 
 from PySide6.QtGui import QStandardItemModel, QStandardItem, Qt
 from PySide6.QtWidgets import QWidget, QDialog, QMessageBox, QMenu
@@ -6,12 +7,15 @@ from PySide6.QtWidgets import QWidget, QDialog, QMessageBox, QMenu
 from app.DBManager import DBManager
 from app.ui.SchedulerEdit import Ui_SchedulerEdit
 from app.ui.SchedulerTable import Ui_SchedulerJobsTable
+# if TYPE_CHECKING:
+#     from MainWindow import MainWindow
 
 class JobEditDialog(Ui_SchedulerEdit, QDialog):
     def __init__(self, parent=None, data=None):
         super().__init__(parent)
         self.setupUi(self)
         self.data = {}
+        self.comboBox_JobName.addItems(parent.parent_window.job_name_map.keys())
         if data:
             # 如果有数据传入，说明是编辑模式，设置输入框初始值
             if 'job_id' in data and data['job_id']:

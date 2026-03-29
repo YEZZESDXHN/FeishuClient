@@ -8,13 +8,12 @@ from PySide6.QtWidgets import QMainWindow, QVBoxLayout
 from apscheduler.schedulers.qt import QtScheduler
 from apscheduler.triggers.cron import CronTrigger
 
+from app.CodebeamerClient.CodebeamerDefectClient import QCodebeamerDefectClient
 from app.DBManager.DBManager import DBManager
 from app.resources.resources import IconEngine
 from app.windows.SchedulerJobsTable import SchedulerJobsTable
-from lark_oapi.api.im.v1 import P2ImMessageReceiveV1, CreateMessageRequest, CreateMessageRequestBody, \
-    CreateMessageResponse, ReplyMessageRequest, ReplyMessageRequestBody, ReplyMessageResponse
+from lark_oapi.api.im.v1 import P2ImMessageReceiveV1
 
-from app.CodebeamerClient.CodebeamerClient import CodebeamerClient
 # from app.FeishuApi.CustomEventDispatcherHandler import EventDispatcherHandler
 from lark_oapi import EventDispatcherHandler
 from app.FeishuApi.FeishuApiClient import FeishuApiClient
@@ -110,11 +109,6 @@ class QFeishuApiClient(QObject, FeishuApiClient):
     def client_init(self):
         super().client_init()
         self.signal_init_finish.emit()
-
-
-class QCodebeamerClient(QObject, CodebeamerClient):
-    def __init__(self, username, password):
-        super().__init__(username=username, password=password)
 
 
 class QRunner(QObject):
@@ -252,6 +246,24 @@ class QRunner(QObject):
                 content={'text': f"Defect同步成功，{result}"}
             )
 
+    def test_job(self):
+        feishu_client = self.parent.feishu_client
+        try:
+            table_index = self.parent.comboBox_BitableDateTable.currentIndex()
+            table_id = self.parent.feishu_bitable_tables[table_index]['table_id']
+            app_token = self.parent.feishu_bitable_app_token
+            feishu_items = feishu_client.bitable_api.get_records(
+                app_token=app_token,
+                table_id=table_id,
+                field_names=['文本'],
+                page_size=2
+            )
+            print(feishu_items)
+        except Exception as e:
+            table_index = self.parent.comboBox_BitableDateTable.currentIndex()
+            logger.error(f"获取多维表格数据表{self.parent.feishu_bitable_tables[table_index]['name']}记录失败，{e}")
+            return
+
 
 class MainWindow(QMainWindow, Ui_MainWindow):
     """
@@ -265,6 +277,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
     signal_job_send_assigned_to_sw_notify = Signal()
     signal_job_send_added_today_notify = Signal()
     signal_job_send_added_yesterday_notify = Signal()
+    signal_job_test = Signal()
 
     def __init__(self):
         super().__init__()
@@ -275,6 +288,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
             "给开发团队发送assigned票通知": self.signal_job_send_assigned_to_sw_notify,
             "今日新增票通知": self.signal_job_send_added_today_notify,
             "昨日新增票通知": self.signal_job_send_added_yesterday_notify,
+            "test": self.signal_job_test,
         }
         self.setupUi(self)
         self.scheduler = QtScheduler()
@@ -304,7 +318,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         self.feishu_ws_client: Optional[QWsClient] = None
         self._feishu_ws_client_init()
 
-        self.cb_client: Optional[QCodebeamerClient] = None
+        self.cb_client: Optional[QCodebeamerDefectClient] = None
         self._codebeamer_init()
         self._runner_init()
         self.signal_connect()
@@ -416,6 +430,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         config = self.db_manager.info_db.get_config()
         self.pushButton_RefreshDataTable.setDisabled(True)
         self.comboBox_BitableDateTable.setDisabled(True)
+        self.comboBox_ManualTrigger.addItems(self.job_name_map.keys())
         if config:
             try:
                 self.cb_username = config['cb_username']
@@ -476,7 +491,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
 
     def _codebeamer_init(self):
         self.cb_client_thread = QThread()
-        self.cb_client = QCodebeamerClient(self.cb_username, self.cb_password)
+        self.cb_client = QCodebeamerDefectClient(self.cb_username, self.cb_password)
         self.cb_client.moveToThread(self.cb_client_thread)
         self.cb_client_thread.start()
 
@@ -518,6 +533,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         self.signal_job_send_assigned_to_sw_notify.connect(self.runner.send_assigned_to_sw_notify)
         self.signal_job_send_added_today_notify.connect(self.runner.send_added_today_notify)
         self.signal_job_send_added_yesterday_notify.connect(self.runner.send_added_yesterday_notify)
+        self.signal_job_test.connect(self.runner.test_job)
 
     def update_cb_username(self):
         self.cb_username = self.lineEdit_Username.text()

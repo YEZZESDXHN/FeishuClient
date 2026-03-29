@@ -404,36 +404,6 @@
                <verstretch>0</verstretch>
               </sizepolicy>
              </property>
-             <item>
-              <property name="text">
-               <string>同步Defects</string>
-              </property>
-             </item>
-             <item>
-              <property name="text">
-               <string>给测试团队发送assigned票通知</string>
-              </property>
-             </item>
-             <item>
-              <property name="text">
-               <string>给系统团队发送assigned票通知</string>
-              </property>
-             </item>
-             <item>
-              <property name="text">
-               <string>给开发团队发送assigned票通知</string>
-              </property>
-             </item>
-             <item>
-              <property name="text">
-               <string>今日新增票通知</string>
-              </property>
-             </item>
-             <item>
-              <property name="text">
-               <string>昨日新增票通知</string>
-              </property>
-             </item>
             </widget>
            </item>
            <item>

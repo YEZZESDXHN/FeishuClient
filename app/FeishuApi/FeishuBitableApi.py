@@ -212,103 +212,182 @@ class FeishuBitableApi:
         :param page_token:
         :return:
         """
-        request: ListAppTableRequest = ListAppTableRequest.builder() \
-            .app_token(app_token) \
-            .page_size(page_size) \
-            .build()
-        response: ListAppTableResponse = self._feishu_api_client.client.bitable.v1.app_table.list(request)
+        _page_token = page_token
+        items = []
+        while True:
+            request: ListAppTableRequest = ListAppTableRequest.builder() \
+                .app_token(app_token) \
+                .page_size(page_size) \
+                .page_token(_page_token) \
+                .build()
+            response: ListAppTableResponse = self._feishu_api_client.client.bitable.v1.app_table.list(request)
 
-        # 处理失败返回
-        if not response.success():
-            logger.error(
-                f"client.bitable.v1.app_table.list failed, "
-                f"code: {response.code}, "
-                f"msg: {response.msg}, "
-                f"log_id: {response.get_log_id()}, "
-                f"resp: \n{json.dumps(json.loads(response.raw.content), indent=4, ensure_ascii=False)}")
-            return []
-        else:
-            return response.data.items
+            # 处理失败返回
+            if not response.success():
+                logger.error(
+                    f"client.bitable.v1.app_table.list failed, "
+                    f"code: {response.code}, "
+                    f"msg: {response.msg}, "
+                    f"log_id: {response.get_log_id()}, "
+                    f"resp: \n{json.dumps(json.loads(response.raw.content), indent=4, ensure_ascii=False)}")
+                return []
+            else:
+                _page_token = response.data.page_token
+                items.extend(response.data.items)
+                if not response.data.has_more:
+                    return items
 
-    def get_records(self, app_token: str, table_id: str, field_names: list, user_id_type: str = 'open_id', page_size: int = 500, page_token: str = '') -> list[AppTableRecord]:
-        request: SearchAppTableRecordRequest = SearchAppTableRecordRequest.builder() \
-            .app_token(app_token) \
-            .table_id(table_id) \
-            .user_id_type(user_id_type) \
-            .page_token(page_token) \
-            .page_size(page_size) \
-            .request_body(SearchAppTableRecordRequestBody.builder()
-                          .field_names(field_names)
-                          .build()) \
-            .build()
+    def get_records(self, app_token: str, table_id: str, field_names: list, user_id_type: str = 'open_id', page_size: int = 100, page_token: str = '') -> list[AppTableRecord]:
+        _page_token = page_token
+        items = []
+        while True:
+            request: SearchAppTableRecordRequest = SearchAppTableRecordRequest.builder() \
+                .app_token(app_token) \
+                .table_id(table_id) \
+                .user_id_type(user_id_type) \
+                .page_token(_page_token) \
+                .page_size(page_size) \
+                .request_body(SearchAppTableRecordRequestBody.builder()
+                              .field_names(field_names)
+                              .build()) \
+                .build()
 
-        # 发起请求
-        response: SearchAppTableRecordResponse = self._feishu_api_client.client.bitable.v1.app_table_record.search(request)
+            # 发起请求
+            response: SearchAppTableRecordResponse = self._feishu_api_client.client.bitable.v1.app_table_record.search(request)
 
-        # 处理失败返回
-        if not response.success():
-            logger.error(
-                f"client.bitable.v1.app_table_record.search failed, "
-                f"code: {response.code}, "
-                f"msg: {response.msg}, "
-                f"log_id: {response.get_log_id()}, "
-                f"resp: \n{json.dumps(json.loads(response.raw.content), indent=4, ensure_ascii=False)}")
-            return []
-        else:
-            return response.data.items
+            # 处理失败返回
+            if not response.success():
+                logger.error(
+                    f"client.bitable.v1.app_table_record.search failed, "
+                    f"code: {response.code}, "
+                    f"msg: {response.msg}, "
+                    f"log_id: {response.get_log_id()}, "
+                    f"resp: \n{json.dumps(json.loads(response.raw.content), indent=4, ensure_ascii=False)}")
+                return []
+            else:
+                _page_token = response.data.page_token
+                items.extend(response.data.items)
+                if not response.data.has_more:
+                    return items
 
-    def delete_records(self, app_token: str, table_id: str, records: list):
-        request: BatchDeleteAppTableRecordRequest = BatchDeleteAppTableRecordRequest.builder() \
-            .app_token(app_token) \
-            .table_id(table_id) \
-            .request_body(BatchDeleteAppTableRecordRequestBody.builder()
-                          .records(records)
-                          .build()) \
-            .build()
-
-        # 发起请求
-        response: BatchDeleteAppTableRecordResponse = self._feishu_api_client.client.bitable.v1.app_table_record.batch_delete(request)
-
-        # 处理失败返回
-        if not response.success():
-            logger.error(
-                f"client.bitable.v1.app_table_record.batch_delete failed, "
-                f"code: {response.code}, "
-                f"msg: {response.msg}, "
-                f"log_id: {response.get_log_id()}, "
-                f"resp: \n{json.dumps(json.loads(response.raw.content), indent=4, ensure_ascii=False)}")
-            return False
-        else:
+    def delete_records(self, app_token: str, table_id: str, records: list, page_size: int = 100):
+        """
+        批量删除多维表格记录（自动分页，防止单次删除过多）
+        :param app_token: 应用token
+        :param table_id: 表格id
+        :param records: 要删除的记录ID列表
+        :param page_size: 每批次删除数量，默认100
+        :return: 全部删除成功返回True，任意一批失败返回False
+        """
+        # 空数据直接返回成功
+        if not records:
             return True
 
-    def add_records(self, app_token: str, table_id: str, records: list[dict], user_id_type: str = "open_id",
-                    client_token: str = "", ignore_consistency_check: bool = True):
-        app_table_records = []
-        for record in records:
-            _app_table_record = AppTableRecord.builder().fields(record).build()
-            app_table_records.append(_app_table_record)
-        request: BatchCreateAppTableRecordRequest = BatchCreateAppTableRecordRequest.builder() \
-            .app_token(app_token) \
-            .table_id(table_id) \
-            .user_id_type(user_id_type) \
-            .client_token(client_token) \
-            .ignore_consistency_check(ignore_consistency_check) \
-            .request_body(BatchCreateAppTableRecordRequestBody.builder()
-                          .records(app_table_records)
-                          .build()) \
-            .build()
+        total = len(records)
+        success = True
 
-        # 发起请求
-        response: BatchCreateAppTableRecordResponse = self._feishu_api_client.client.bitable.v1.app_table_record.batch_create(request)
+        # 分页循环删除
+        for i in range(0, total, page_size):
+            # 截取当前批次的记录
+            current_batch = records[i:i + page_size]
 
-        # 处理失败返回
-        if not response.success():
-            logger.error(
-                f"client.bitable.v1.app_table_record.batch_create failed, "
-                f"code: {response.code}, "
-                f"msg: {response.msg}, "
-                f"log_id: {response.get_log_id()}, "
-                f"resp: \n{json.dumps(json.loads(response.raw.content), indent=4, ensure_ascii=False)}")
-            return False
-        else:
+            try:
+                # 构建请求
+                request: BatchDeleteAppTableRecordRequest = BatchDeleteAppTableRecordRequest.builder() \
+                    .app_token(app_token) \
+                    .table_id(table_id) \
+                    .request_body(BatchDeleteAppTableRecordRequestBody.builder()
+                                  .records(current_batch)
+                                  .build()) \
+                    .build()
+
+                # 发起请求
+                response: BatchDeleteAppTableRecordResponse = self._feishu_api_client.client.bitable.v1.app_table_record.batch_delete(
+                    request)
+
+                # 处理失败返回
+                if not response.success():
+                    logger.error(
+                        f"批量删除记录失败（第{i // page_size + 1}批），"
+                        f"code: {response.code}, "
+                        f"msg: {response.msg}, "
+                        f"log_id: {response.get_log_id()}, "
+                        f"删除数量: {len(current_batch)}, "
+                        f"resp: \n{json.dumps(json.loads(response.raw.content), indent=4, ensure_ascii=False)}"
+                    )
+                    success = False
+                    # 可以选择失败后继续删其他批次，或者直接break中断
+                    break
+                else:
+                    logger.info(f"批量删除记录成功（第{i // page_size + 1}批），本次删除 {len(current_batch)} 条")
+
+            except Exception as e:
+                logger.exception(f"批量删除接口调用异常（第{i // page_size + 1}批）: {str(e)}")
+                success = False
+
+        return success
+
+    def add_records(
+            self,
+            app_token: str,
+            table_id: str,
+            records: list[dict],
+            user_id_type: str = "open_id",
+            client_token: str = "",  # 格式为标准的 uuid，操作的唯一标识，用于幂等的进行更新操作。此值为空表示将发起一次新的请求，此值非空表示幂等的进行更新操作。
+            ignore_consistency_check: bool = True,
+            page_size: int = 100
+    ):
+        # 空数据直接返回成功
+        if not records:
+            logger.info("新增记录列表为空，跳过执行")
             return True
+
+        total = len(records)
+        all_success = True
+
+        # 分页循环新增
+        for i in range(0, total, page_size):
+            current_batch = records[i:i + page_size]
+            batch_num = i // page_size + 1
+
+            try:
+                # 构建单批次 records
+                app_table_records = []
+                for record in current_batch:
+                    _app_table_record = AppTableRecord.builder().fields(record).build()
+                    app_table_records.append(_app_table_record)
+
+                # 构建请求
+                request: BatchCreateAppTableRecordRequest = BatchCreateAppTableRecordRequest.builder() \
+                    .app_token(app_token) \
+                    .table_id(table_id) \
+                    .user_id_type(user_id_type) \
+                    .client_token(client_token) \
+                    .ignore_consistency_check(ignore_consistency_check) \
+                    .request_body(BatchCreateAppTableRecordRequestBody.builder()
+                                  .records(app_table_records)
+                                  .build()) \
+                    .build()
+
+                # 发起请求
+                response: BatchCreateAppTableRecordResponse = self._feishu_api_client.client.bitable.v1.app_table_record.batch_create(
+                    request)
+
+                if not response.success():
+                    logger.error(
+                        f"新增记录失败（第{batch_num}批），"
+                        f"code: {response.code}, "
+                        f"msg: {response.msg}, "
+                        f"log_id: {response.get_log_id()}, "
+                        f"本次条数: {len(current_batch)}, "
+                        f"resp: \n{json.dumps(json.loads(response.raw.content), indent=4, ensure_ascii=False)}"
+                    )
+                    all_success = False
+                else:
+                    logger.info(f"新增记录成功（第{batch_num}批），本次新增 {len(current_batch)} 条")
+
+            except Exception as e:
+                logger.exception(f"新增接口调用异常（第{batch_num}批）: {str(e)}")
+                all_success = False
+
+        return all_success
