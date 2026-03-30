@@ -30,13 +30,17 @@ class CodeBeamerDefect(BaseModel):
     status: Optional[str] = ''
     summary: str = ''
     assigned_to: Optional[str] = ''
+    assigned_to_email: Optional[str] = ''
     modified_at: Optional[int] = 0
     modified_by: Optional[str] = ''
+    modified_by_email: Optional[str] = ''
     fixed_in_release: Optional[str] = ''
     reported_in_release: Optional[str] = ''
     team: Optional[str] = ''
     owner: Optional[str] = ''
+    owner_email: Optional[str] = ''
     submitted_by: Optional[str] = ''
+    submitted_by_email: Optional[str] = ''
     submitted_at: Optional[int] = 0
     frequency: Optional[str] = ''
     severity: Optional[str] = ''

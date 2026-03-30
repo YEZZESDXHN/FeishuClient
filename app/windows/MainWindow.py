@@ -41,7 +41,6 @@ class QtLoggingHandler(logging.Handler):
     def emit(self, record):
         # 格式化日志内容
         msg = self.format(record)
-        print('def emit(self, record):')
         # 通过信号发射出去，Qt 会自动处理跨线程 UI 更新
         self.signaler.log_signal.emit(msg)
 
@@ -231,10 +230,116 @@ class QRunner(QObject):
         self.send_assigned_notify(members, '以下为Assigned给你的Bug，请注意及时验证并更改状态！')
 
     def send_added_today_notify(self):
-        pass
+        chat_id = self.parent.group_chat_id
+        if not chat_id:
+            logger.warning(f"未定义group chat id")
+            return
+        feishu_client = self.parent.feishu_client
+        update_time = self.parent.db_manager.update_time_db.get_update_time()
+        try:
+            defects = self.parent.db_manager.defects_db.get_today_defects()
+            if defects:
+                content = {
+                    'zh_cn': {
+                        'title': f'今日新增Defects数量:{len(defects)}',
+                        "content": []
+                    }
+                }
+                defect_content = content['zh_cn']['content']
+                defect_content.append([{
+                    "tag": "text",
+                    "text": f"数据同步时间：{update_time}"
+                }])
+                for defect in defects:
+                    defect_content.append([{"tag": "hr"}])
+                    defect_content.append([
+                        {
+                            "tag": "a",
+                            "href": f"https://cb.alm.vnet.valeo.com/cb/issue/{defect.defect_id}",
+                            "text": f"{defect.defect_id}  ",
+                            "style": ["bold", "italic"]
+                        },
+                        {
+                            "tag": "text",
+                            "text": f"{defect.summary}"
+                        },
+                    ])
+                    defect_content.append([
+                        {
+                            "tag": "text",
+                            "text": f"提交人：{defect.submitted_by}"
+                        },
+                        {
+                            "tag": "text",
+                            "text": f"指派人：{defect.assigned_to}"
+                        },
+                    ])
+
+                feishu_client.send_message(
+                    receive_id_type='chat_id',
+                    receive_id=chat_id,
+                    msg_type='post',
+                    content=content
+                )
+
+        except Exception as e:
+            logger.error(f"send_added_today_notify执行失败，{e}")
 
     def send_added_yesterday_notify(self):
-        pass
+        chat_id = self.parent.group_chat_id
+        if not chat_id:
+            logger.warning(f"未定义group chat id")
+            return
+        feishu_client = self.parent.feishu_client
+        update_time = self.parent.db_manager.update_time_db.get_update_time()
+        try:
+            defects = self.parent.db_manager.defects_db.get_yesterday_defects()
+            if defects:
+                content = {
+                    'zh_cn': {
+                        'title': f'今日新增Defects数量:{len(defects)}',
+                        "content": []
+                    }
+                }
+                defect_content = content['zh_cn']['content']
+                defect_content.append([{
+                    "tag": "text",
+                    "text": f"数据同步时间：{update_time}"
+                }])
+                for defect in defects:
+                    defect_content.append([{"tag": "hr"}])
+                    defect_content.append([
+                        {
+                            "tag": "a",
+                            "href": f"https://cb.alm.vnet.valeo.com/cb/issue/{defect.defect_id}",
+                            "text": f"{defect.defect_id}  ",
+                            "style": ["bold", "italic"]
+                        },
+                        {
+                            "tag": "text",
+                            "text": f"{defect.summary}"
+                        },
+                    ])
+                    defect_content.append([
+                        {
+                            "tag": "text",
+                            "text": f"提交人：{defect.submitted_by}"
+                        },
+                        {
+                            "tag": "text",
+                            "text": f"指派人：{defect.assigned_to}"
+                        },
+                    ])
+
+                feishu_client.send_message(
+                    receive_id_type='chat_id',
+                    receive_id=chat_id,
+                    msg_type='post',
+                    content=content
+                )
+
+        except Exception as e:
+            logger.error(f"send_added_yesterday_notify执行失败，{e}")
 
     def sync_code_beamer_defect_to_feishu(self):
         code_beamer_client = self.parent.cb_client
@@ -404,6 +509,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         self.feishu_bitable_url: str = ''
         self.feishu_bitable_tables: list[dict] = []  # [{table_id: table_name}]
         self.feishu_bitable_app_token: str = ''
+        self.group_chat_id:  str = ''
 
         self.feishu_client: Optional[QFeishuApiClient] = None
         self._feishu_client_init()
@@ -554,6 +660,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
                 self.feishu_app_id = config['feishu_app_id']
                 self.feishu_secret = config['feishu_secret']
                 self.feishu_bitable_url = config['feishu_bitable_url']
+                self.group_chat_id = config['feishu_group_chat_id']
                 self.feishu_client.app_id = self.feishu_app_id
                 self.feishu_client.app_secret = self.feishu_secret
                 self.feishu_ws_client.app_id = self.feishu_app_id
@@ -566,8 +673,9 @@ class MainWindow(QMainWindow, Ui_MainWindow):
                 self.lineEdit_AppID.setText(self.feishu_app_id)
                 self.lineEdit_AppSecret.setText(self.feishu_secret)
                 self.lineEdit_BitableUrl.setText(self.feishu_bitable_url)
+                self.lineEdit_GroupChatID.setText(self.group_chat_id)
             except Exception as e:
-                pass
+                logger.error(f"初始化ui info失败， {e}")
 
     def init_database(self, db):
         db_path = Path(db)  # 转换为 Path 对象（方便处理路径）
@@ -597,7 +705,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
             self.comboBox_BitableDateTable.setDisabled(False)
             self.pushButton_ManualTrigger.setDisabled(False)
             self.pushButton_FeishuClient.setIcon(IconEngine.get_icon('link', 'green'))
-            self.pushButton_RefreshDataTable.clicked.emit()
+            # self.pushButton_RefreshDataTable.clicked.emit()
 
     def _runner_init(self):
         self.runner_thread = QThread()
@@ -634,6 +742,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         self.lineEdit_AppID.editingFinished.connect(self.update_feishu_app_id)
         self.lineEdit_AppSecret.editingFinished.connect(self.update_feishu_secret)
         self.lineEdit_BitableUrl.editingFinished.connect(self.update_feishu_bitable_url)
+        self.lineEdit_GroupChatID.editingFinished.connect(self.update_group_chat_id)
         self.pushButton_FeishuClient.clicked.connect(self.feishu_client.client_init)
         self.pushButton_FeishuWsClient.clicked.connect(self.feishu_ws_client.ws_client_start)
         self.feishu_client.signal_data_tables.connect(self.update_feishu_bitable_tables)
@@ -659,6 +768,10 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         self.comboBox_CBProject.clear()
         self.comboBox_CBProject.addItems(projects_name_list)
 
+    def update_group_chat_id(self):
+        self.group_chat_id = self.lineEdit_GroupChatID.text()
+        self.cb_client.update_username(self.group_chat_id)
+        self.db_manager.info_db.update_single_field(field_name='feishu_group_chat_id', value=self.group_chat_id)
 
     def update_cb_username(self):
         self.cb_username = self.lineEdit_Username.text()
@@ -703,10 +816,8 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         for table in tables:
             self.feishu_bitable_tables.append({'table_id': table.table_id, "name": table.name})
             name_list.append(table.name)
-        self.comboBox_BitableDateTable.blockSignals(True)
         self.comboBox_BitableDateTable.clear()
         self.comboBox_BitableDateTable.addItems(name_list)
-        self.comboBox_BitableDateTable.blockSignals(False)
 
     def closeEvent(self, event) -> None:
         """重写关闭事件，优雅退出线程"""

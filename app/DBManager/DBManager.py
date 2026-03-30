@@ -155,6 +155,7 @@ class SchedulerDB(DBBase):
         rowcount = self.execute_dml(sql, (new_param, job_id))
         return rowcount is not None and rowcount > 0
 
+
 class InfoDB(DBBase):
     def __init__(self, db_path: str):
         super().__init__(db_path)
@@ -173,7 +174,8 @@ class InfoDB(DBBase):
                 cb_password TEXT DEFAULT '',
                 feishu_app_id TEXT DEFAULT '',
                 feishu_secret TEXT DEFAULT '',
-                feishu_bitable_url TEXT DEFAULT ''
+                feishu_bitable_url TEXT DEFAULT '',
+                feishu_group_chat_id TEXT DEFAULT ''
             )
         """
         success = self.execute_ddl(create_sql)
@@ -262,8 +264,6 @@ class UpdateTimeDB(DBBase):
         return self.set_update_time(now_str)
 
 
-
-
 class DefectsDB(DBBase):
     def __init__(self, db_path: str):
         super().__init__(db_path)
@@ -279,13 +279,17 @@ class DefectsDB(DBBase):
                 status TEXT DEFAULT '',
                 summary TEXT NOT NULL,
                 assigned_to TEXT DEFAULT '',
+                assigned_to_email TEXT DEFAULT '',
                 modified_at INTEGER DEFAULT 0,
                 modified_by TEXT DEFAULT '',
+                modified_by_email TEXT DEFAULT '',
                 fixed_in_release TEXT DEFAULT '',
                 reported_in_release TEXT DEFAULT '',
                 team TEXT DEFAULT '',
                 owner TEXT DEFAULT '',
+                owner_email TEXT DEFAULT '',
                 submitted_by TEXT DEFAULT '',
+                submitted_by_email TEXT DEFAULT '',
                 submitted_at INTEGER DEFAULT 0,
                 frequency TEXT DEFAULT '',
                 severity TEXT DEFAULT ''
@@ -425,8 +429,7 @@ class DefectsDB(DBBase):
                 'no_change': len(defects) - inserted_total - updated_total
             }
         except sqlite3.Error as e:
-            logger.exception(f"精准批量 Upsert 失败: {e}")
-            return {'inserted': 0, 'updated': 0, 'no_change': 0}
+            raise f"批量 Upsert 失败: {e}"
 
     def get_all_defects(self) -> list[CodeBeamerDefect]:
         """获取所有缺陷，并自动转换为模型对象列表"""

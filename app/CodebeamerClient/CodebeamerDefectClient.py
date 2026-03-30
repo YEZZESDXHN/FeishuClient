@@ -20,10 +20,12 @@ class QCodebeamerDefectClient(QObject, CodebeamerClient):
             defect.defect_id = item['id']
             defect.status = item['status']['name']
             defect.summary = item['name']
-            defect.assigned_to = ",".join(self.get_email(_item['name']) for _item in item['assignedTo'] if self.get_email(_item['name']))
+            defect.assigned_to_email = ",".join(self.get_email(_item['name'])[1] for _item in item['assignedTo'] if self.get_email(_item['name']))
+            defect.assigned_to = ",".join(self.get_email(_item['name'])[0] for _item in item['assignedTo'] if self.get_email(_item['name']))
             defect.modified_at = self.convert_iso_to_unix(item['modifiedAt']) + 28800000
             # print(f"modifiedAt:{item['modifiedAt']},unix:{self.convert_iso_to_unix(item['modifiedAt'])}")
-            defect.modified_by = self.get_email(item['modifiedBy']['name'])
+            defect.modified_by_email = self.get_email(item['modifiedBy']['name'])[1]
+            defect.modified_by = self.get_email(item['modifiedBy']['name'])[0]
             try:
                 defect.severity = item['severities'][0]['name']
             except:
@@ -42,8 +44,10 @@ class QCodebeamerDefectClient(QObject, CodebeamerClient):
                 defect.team = item['teams'][0]['name']
             except Exception as e:
                 defect.team = ''
-            defect.owner = ",".join(self.get_email(_item['name']) for _item in item['owners'] if self.get_email(_item['name']))
-            defect.submitted_by = self.get_email(item['createdBy']['name'])
+            defect.owner_email = ",".join(self.get_email(_item['name'])[1] for _item in item['owners'] if self.get_email(_item['name']))
+            defect.owner = ",".join(self.get_email(_item['name'])[0] for _item in item['owners'] if self.get_email(_item['name']))
+            defect.submitted_by_email = self.get_email(item['createdBy']['name'])[1]
+            defect.submitted_by = self.get_email(item['createdBy']['name'])[0]
             defect.submitted_at = self.convert_iso_to_unix(item['createdAt']) + 28800000
             defect_list.append(defect)
         return defect_list

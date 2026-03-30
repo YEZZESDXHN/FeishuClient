@@ -458,23 +458,23 @@ class CodebeamerClient:
         # 3. 拼接后缀
         email = f"{email_prefix}@valeo.com"
 
-        return email
+        return full_name, email
 
 
 
     def get_email(self, username):
         """获取 Email，不存在则生成并持久化"""
         # 1. 尝试从内存/缓存中获取
-        email = self.email_cache.get(username)
+        info = self.email_cache.get(username)
 
-        if not email:
+        if not info:
             # 2. 如果不存在，调用生成函数
-            email = self.generate_email_by_username(username)
+            info = self.generate_email_by_username(username)
 
             # 3. 更新内存变量
             # if not email:
             #     return None
-            self.email_cache[username] = email
+            self.email_cache[username] = info
 
             # 4. 同步写入 config 文件（持久化）
             try:
@@ -483,7 +483,7 @@ class CodebeamerClient:
             except IOError as e:
                 print(f"Error saving config: {e}")
 
-        return email
+        return info
 
     def convert_iso_to_unix(self, iso_str):
         """

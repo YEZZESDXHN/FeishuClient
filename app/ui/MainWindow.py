@@ -24,7 +24,7 @@ class Ui_MainWindow(object):
     def setupUi(self, MainWindow):
         if not MainWindow.objectName():
             MainWindow.setObjectName(u"MainWindow")
-        MainWindow.resize(697, 468)
+        MainWindow.resize(767, 592)
         self.centralwidget = QWidget(MainWindow)
         self.centralwidget.setObjectName(u"centralwidget")
         self.verticalLayout_5 = QVBoxLayout(self.centralwidget)
@@ -36,8 +36,8 @@ class Ui_MainWindow(object):
         self.tabWidget.setObjectName(u"tabWidget")
         self.tab_2 = QWidget()
         self.tab_2.setObjectName(u"tab_2")
-        self.verticalLayout_4 = QVBoxLayout(self.tab_2)
-        self.verticalLayout_4.setObjectName(u"verticalLayout_4")
+        self.verticalLayout_3 = QVBoxLayout(self.tab_2)
+        self.verticalLayout_3.setObjectName(u"verticalLayout_3")
         self.horizontalLayout_12 = QHBoxLayout()
         self.horizontalLayout_12.setObjectName(u"horizontalLayout_12")
         self.groupBox_2 = QGroupBox(self.tab_2)
@@ -182,6 +182,7 @@ class Ui_MainWindow(object):
 
         self.comboBox_CBProject = QComboBox(self.groupBox)
         self.comboBox_CBProject.setObjectName(u"comboBox_CBProject")
+        self.comboBox_CBProject.setStyleSheet(u"")
 
         self.horizontalLayout_6.addWidget(self.comboBox_CBProject)
 
@@ -199,10 +200,30 @@ class Ui_MainWindow(object):
         self.horizontalLayout_12.addWidget(self.groupBox)
 
 
-        self.verticalLayout_4.addLayout(self.horizontalLayout_12)
+        self.verticalLayout_3.addLayout(self.horizontalLayout_12)
 
-        self.verticalLayout_3 = QVBoxLayout()
-        self.verticalLayout_3.setObjectName(u"verticalLayout_3")
+        self.horizontalLayout_10 = QHBoxLayout()
+        self.horizontalLayout_10.setObjectName(u"horizontalLayout_10")
+        self.label_9 = QLabel(self.tab_2)
+        self.label_9.setObjectName(u"label_9")
+        sizePolicy1.setHeightForWidth(self.label_9.sizePolicy().hasHeightForWidth())
+        self.label_9.setSizePolicy(sizePolicy1)
+        self.label_9.setMinimumSize(QSize(75, 20))
+
+        self.horizontalLayout_10.addWidget(self.label_9)
+
+        self.lineEdit_GroupChatID = QLineEdit(self.tab_2)
+        self.lineEdit_GroupChatID.setObjectName(u"lineEdit_GroupChatID")
+        sizePolicy2.setHeightForWidth(self.lineEdit_GroupChatID.sizePolicy().hasHeightForWidth())
+        self.lineEdit_GroupChatID.setSizePolicy(sizePolicy2)
+        self.lineEdit_GroupChatID.setMinimumSize(QSize(120, 0))
+        self.lineEdit_GroupChatID.setDragEnabled(False)
+
+        self.horizontalLayout_10.addWidget(self.lineEdit_GroupChatID)
+
+
+        self.verticalLayout_3.addLayout(self.horizontalLayout_10)
+
         self.horizontalLayout_5 = QHBoxLayout()
         self.horizontalLayout_5.setObjectName(u"horizontalLayout_5")
         self.label_5 = QLabel(self.tab_2)
@@ -238,6 +259,7 @@ class Ui_MainWindow(object):
         self.comboBox_BitableDateTable.setObjectName(u"comboBox_BitableDateTable")
         sizePolicy2.setHeightForWidth(self.comboBox_BitableDateTable.sizePolicy().hasHeightForWidth())
         self.comboBox_BitableDateTable.setSizePolicy(sizePolicy2)
+        self.comboBox_BitableDateTable.setStyleSheet(u"")
         self.comboBox_BitableDateTable.setEditable(False)
 
         self.horizontalLayout_8.addWidget(self.comboBox_BitableDateTable)
@@ -252,9 +274,6 @@ class Ui_MainWindow(object):
 
 
         self.verticalLayout_3.addLayout(self.horizontalLayout_8)
-
-
-        self.verticalLayout_4.addLayout(self.verticalLayout_3)
 
         self.horizontalLayout_9 = QHBoxLayout()
         self.horizontalLayout_9.setObjectName(u"horizontalLayout_9")
@@ -280,11 +299,11 @@ class Ui_MainWindow(object):
         self.horizontalLayout_9.addWidget(self.pushButton_ManualTrigger)
 
 
-        self.verticalLayout_4.addLayout(self.horizontalLayout_9)
+        self.verticalLayout_3.addLayout(self.horizontalLayout_9)
 
         self.verticalSpacer = QSpacerItem(20, 0, QSizePolicy.Policy.Minimum, QSizePolicy.Policy.Expanding)
 
-        self.verticalLayout_4.addItem(self.verticalSpacer)
+        self.verticalLayout_3.addItem(self.verticalSpacer)
 
         self.tabWidget.addTab(self.tab_2, "")
         self.tab_scheduler = QWidget()
@@ -302,7 +321,7 @@ class Ui_MainWindow(object):
         MainWindow.setCentralWidget(self.centralwidget)
         self.menubar = QMenuBar(MainWindow)
         self.menubar.setObjectName(u"menubar")
-        self.menubar.setGeometry(QRect(0, 0, 697, 33))
+        self.menubar.setGeometry(QRect(0, 0, 767, 33))
         MainWindow.setMenuBar(self.menubar)
 
         self.retranslateUi(MainWindow)
@@ -325,6 +344,9 @@ class Ui_MainWindow(object):
         self.label_2.setText(QCoreApplication.translate("MainWindow", u"\u5bc6\u7801\uff1a", None))
         self.label_8.setText(QCoreApplication.translate("MainWindow", u"\u9879\u76ee\uff1a", None))
         self.pushButton_GetProject.setText(QCoreApplication.translate("MainWindow", u"\u5237\u65b0", None))
+        self.label_9.setText(QCoreApplication.translate("MainWindow", u"\u7fa4\u7ec4ID\uff1a", None))
+        self.lineEdit_GroupChatID.setText("")
+        self.lineEdit_GroupChatID.setPlaceholderText(QCoreApplication.translate("MainWindow", u"\u8bf7\u8f93\u5165\u7fa4\u7ec4Chat ID", None))
         self.label_5.setText(QCoreApplication.translate("MainWindow", u"\u591a\u7ef4\u8868\u683c\uff1a", None))
         self.label_6.setText(QCoreApplication.translate("MainWindow", u"\u6570\u636e\u8868", None))
         self.pushButton_RefreshDataTable.setText(QCoreApplication.translate("MainWindow", u"\u5237\u65b0", None))
