@@ -146,37 +146,52 @@ class FeishuBitableApi:
         if not self._feishu_api_client.client:
             logger.error(f"Client未初始化")
             return
-        request: CreateAppRequest = CreateAppRequest.builder() \
-            .request_body(ReqApp.builder()
-                          .name(name)
-                          .folder_token(folder_token)
-                          .build()) \
-            .build()
+        try:
+            request: CreateAppRequest = CreateAppRequest.builder() \
+                .request_body(ReqApp.builder()
+                              .name(name)
+                              .folder_token(folder_token)
+                              .build()) \
+                .build()
 
-        # 发起请求
-        response: CreateAppResponse = self._feishu_api_client.client.bitable.v1.app.create(request)
+            # 发起请求
+            response: CreateAppResponse = self._feishu_api_client.client.bitable.v1.app.create(request)
 
-        # 处理失败返回
-        if not response.success():
-            logger.error(
-                f"client.bitable.v1.app.create failed, code: {response.code}, "
-                f"msg: {response.msg}, log_id: {response.get_log_id()}, "
-                f"resp: \n{json.dumps(json.loads(response.raw.content), indent=4, ensure_ascii=False)}")
-            return
+            # 处理失败返回
+            if not response.success():
+                logger.error(
+                    f"client.bitable.v1.app.create failed, code: {response.code}, "
+                    f"msg: {response.msg}, log_id: {response.get_log_id()}, "
+                    f"resp: \n{json.dumps(json.loads(response.raw.content), indent=4, ensure_ascii=False)}")
+                return
+        except Exception as e:
+            logger.error(f"client.bitable.v1.app.create failed, {e}")
 
     def create_data_table(self, name: str, default_view_name: str):
         """
         新增一个数据表
         :return:
         """
-        pass
+        if not self._feishu_api_client.client:
+            logger.error(f"Client未初始化")
+            return
+        try:
+            pass
+        except Exception as e:
+            logger.error(f" failed, {e}")
 
     def create_data_tables(self):
         """
         新增多个数据表
         :return:
         """
-        pass
+        if not self._feishu_api_client.client:
+            logger.error(f"Client未初始化")
+            return
+        try:
+            pass
+        except Exception as e:
+            logger.error(f" failed, {e}")
 
     @staticmethod
     def get_feishu_app_token(table_url: str) -> str:
@@ -201,7 +216,8 @@ class FeishuBitableApi:
                     return parts[idx + 1]
 
             return ""
-        except Exception:
+        except Exception as e:
+            logger.error(f"get feishu app token failed, {e}")
             return ""
 
     def get_data_tables(self, app_token: str, page_size: int = 10, page_token: str = '') -> List[AppTable]:
@@ -215,60 +231,66 @@ class FeishuBitableApi:
         _page_token = page_token
         items = []
         while True:
-            request: ListAppTableRequest = ListAppTableRequest.builder() \
-                .app_token(app_token) \
-                .page_size(page_size) \
-                .page_token(_page_token) \
-                .build()
-            response: ListAppTableResponse = self._feishu_api_client.client.bitable.v1.app_table.list(request)
+            try:
+                request: ListAppTableRequest = ListAppTableRequest.builder() \
+                    .app_token(app_token) \
+                    .page_size(page_size) \
+                    .page_token(_page_token) \
+                    .build()
+                response: ListAppTableResponse = self._feishu_api_client.client.bitable.v1.app_table.list(request)
 
-            # 处理失败返回
-            if not response.success():
-                logger.error(
-                    f"client.bitable.v1.app_table.list failed, "
-                    f"code: {response.code}, "
-                    f"msg: {response.msg}, "
-                    f"log_id: {response.get_log_id()}, "
-                    f"resp: \n{json.dumps(json.loads(response.raw.content), indent=4, ensure_ascii=False)}")
-                return []
-            else:
-                _page_token = response.data.page_token
-                items.extend(response.data.items)
-                if not response.data.has_more:
-                    return items
+                # 处理失败返回
+                if not response.success():
+                    logger.error(
+                        f"client.bitable.v1.app_table.list failed, "
+                        f"code: {response.code}, "
+                        f"msg: {response.msg}, "
+                        f"log_id: {response.get_log_id()}, "
+                        f"resp: \n{json.dumps(json.loads(response.raw.content), indent=4, ensure_ascii=False)}")
+                    return []
+                else:
+                    _page_token = response.data.page_token
+                    items.extend(response.data.items)
+                    if not response.data.has_more:
+                        return items
+            except Exception as e:
+                logger.error(f"client.bitable.v1.app_table.list failed, {e}")
 
     def get_records(self, app_token: str, table_id: str, field_names: list, user_id_type: str = 'open_id', page_size: int = 100, page_token: str = '') -> list[AppTableRecord]:
         _page_token = page_token
         items = []
         while True:
-            request: SearchAppTableRecordRequest = SearchAppTableRecordRequest.builder() \
-                .app_token(app_token) \
-                .table_id(table_id) \
-                .user_id_type(user_id_type) \
-                .page_token(_page_token) \
-                .page_size(page_size) \
-                .request_body(SearchAppTableRecordRequestBody.builder()
-                              .field_names(field_names)
-                              .build()) \
-                .build()
+            try:
+                request: SearchAppTableRecordRequest = SearchAppTableRecordRequest.builder() \
+                    .app_token(app_token) \
+                    .table_id(table_id) \
+                    .user_id_type(user_id_type) \
+                    .page_token(_page_token) \
+                    .page_size(page_size) \
+                    .request_body(SearchAppTableRecordRequestBody.builder()
+                                  .field_names(field_names)
+                                  .build()) \
+                    .build()
 
-            # 发起请求
-            response: SearchAppTableRecordResponse = self._feishu_api_client.client.bitable.v1.app_table_record.search(request)
+                # 发起请求
+                response: SearchAppTableRecordResponse = self._feishu_api_client.client.bitable.v1.app_table_record.search(request)
 
-            # 处理失败返回
-            if not response.success():
-                logger.error(
-                    f"client.bitable.v1.app_table_record.search failed, "
-                    f"code: {response.code}, "
-                    f"msg: {response.msg}, "
-                    f"log_id: {response.get_log_id()}, "
-                    f"resp: \n{json.dumps(json.loads(response.raw.content), indent=4, ensure_ascii=False)}")
-                return []
-            else:
-                _page_token = response.data.page_token
-                items.extend(response.data.items)
-                if not response.data.has_more:
-                    return items
+                # 处理失败返回
+                if not response.success():
+                    logger.error(
+                        f"client.bitable.v1.app_table_record.search failed, "
+                        f"code: {response.code}, "
+                        f"msg: {response.msg}, "
+                        f"log_id: {response.get_log_id()}, "
+                        f"resp: \n{json.dumps(json.loads(response.raw.content), indent=4, ensure_ascii=False)}")
+                    return []
+                else:
+                    _page_token = response.data.page_token
+                    items.extend(response.data.items)
+                    if not response.data.has_more:
+                        return items
+            except Exception as e:
+                logger.error(f"client.bitable.v1.app_table_record.search failed, {e}")
 
     def delete_records(self, app_token: str, table_id: str, records: list, page_size: int = 100):
         """

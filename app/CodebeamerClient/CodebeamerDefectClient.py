@@ -1,6 +1,6 @@
 import logging
 
-from PySide6.QtCore import QObject
+from PySide6.QtCore import QObject, Signal
 
 from app.CodebeamerClient.CodebeamerClient import CodebeamerClient
 from app.user_data import CodeBeamerDefect
@@ -9,6 +9,7 @@ logger = logging.getLogger('FeishuClient.' + __name__)
 
 
 class QCodebeamerDefectClient(QObject, CodebeamerClient):
+    signal_projects = Signal(object)
     def __init__(self, username, password):
         super().__init__(username=username, password=password)
 
@@ -46,3 +47,11 @@ class QCodebeamerDefectClient(QObject, CodebeamerClient):
             defect.submitted_at = self.convert_iso_to_unix(item['createdAt']) + 28800000
             defect_list.append(defect)
         return defect_list
+
+    def get_projects(self):
+        if self.client._authenticated or self.client.authenticate():
+            try:
+                project_lists = self.client.get_json("projects")
+                self.signal_projects.emit(project_lists)
+            except Exception as e:
+                logger.error(f"获取项目失败，{e}")

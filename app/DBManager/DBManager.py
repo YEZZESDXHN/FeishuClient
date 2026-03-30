@@ -1,5 +1,6 @@
 import logging
 import sqlite3
+from datetime import date, timedelta, datetime
 from typing import Optional, Union, List, Any
 
 from app.user_data import CodeBeamerDefect
@@ -10,6 +11,11 @@ DEFECTS_TABLE_NAME = 'cb_defects'
 INFO_TABLE_NAME = 'info'
 SCHEDULER_TABLE_NAME = 'scheduler'
 EMAIL_CONTACTS_TABLE_NAME = 'email_contacts'
+SYS_MEMBERS_TABLE_NAME = 'sys_members'
+SW_MEMBERS_TABLE_NAME = 'sw_members'
+TEST_MEMBERS_TABLE_NAME = 'test_members'
+ADMIN_MEMBERS_TABLE_NAME = 'admin_members'
+UPDATE_TIME_TABLE_NAME = 'update_time'
 
 
 class DBBase:
@@ -33,7 +39,7 @@ class DBBase:
         try:
             with self._get_conn() as conn:
                 conn.execute(sql)
-            logger.info(f"DDL语句执行成功：{sql[:50]}...")
+            logger.debug(f"DDL语句执行成功：{sql[:50]}...")
             return True
         except sqlite3.Error as e:
             logger.exception(f"DDL语句执行失败：{str(e)}")
@@ -211,6 +217,53 @@ class InfoDB(DBBase):
         return res is not None and res > 0
 
 
+class UpdateTimeDB(DBBase):
+    def __init__(self, db_path: str):
+        super().__init__(db_path)
+        self.table_name = UPDATE_TIME_TABLE_NAME
+        self.safe_table = self._safe_table_name(self.table_name)
+
+        # 定义唯一的固定主键值
+        self.SINGLE_ROW_KEY = "GLOBAL_UPDATE_TIME"
+        self.init_database()
+
+    def init_database(self) -> bool:
+        """初始化表，使用 TEXT 存储时间"""
+        create_sql = f"""
+            CREATE TABLE IF NOT EXISTS {self.safe_table} (
+                key TEXT PRIMARY KEY,
+                UpdateTime TEXT DEFAULT ''
+            )
+        """
+        success = self.execute_ddl(create_sql)
+        if success:
+            # 确保初始化一行数据。如果不存在，初始时间设为空字符串或一个极早的时间
+            init_sql = f"INSERT OR IGNORE INTO {self.safe_table} (key, UpdateTime) VALUES (?, ?)"
+            self.execute_dml(init_sql, (self.SINGLE_ROW_KEY, "1970-01-01 00:00:00"))
+        return success
+
+    def get_update_time(self) -> str:
+        """获取存储的时间字符串"""
+        sql = f"SELECT UpdateTime FROM {self.safe_table} WHERE key = ?"
+        rows = self.execute_dql(sql, (self.SINGLE_ROW_KEY,))
+        if rows and rows[0]['UpdateTime']:
+            return rows[0]['UpdateTime']
+        return ""
+
+    def set_update_time(self, time_str: str) -> bool:
+        """手动设置更新时间字符串"""
+        sql = f"UPDATE {self.safe_table} SET UpdateTime = ? WHERE key = ?"
+        rowcount = self.execute_dml(sql, (time_str, self.SINGLE_ROW_KEY))
+        return rowcount is not None and rowcount > 0
+
+    def set_now(self) -> bool:
+        """自动将当前系统时间存入数据库 (格式: YYYY-MM-DD HH:MM:SS)"""
+        now_str = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        return self.set_update_time(now_str)
+
+
+
+
 class DefectsDB(DBBase):
     def __init__(self, db_path: str):
         super().__init__(db_path)
@@ -239,6 +292,64 @@ class DefectsDB(DBBase):
             )
         """
         return self.execute_ddl(create_sql)
+
+    def _get_timestamp_ms(self, days_offset: int = 0) -> int:
+        """
+        私有辅助方法：获取指定日期 00:00:00 的 13 位毫秒时间戳
+        days_offset: 0 代表今天, -1 代表昨天
+        """
+        target_date = date.today() + timedelta(days=days_offset)
+        dt = datetime.combine(target_date, datetime.min.time())
+        return int(dt.timestamp() * 1000)
+
+    def get_today_defects(self) -> list[CodeBeamerDefect]:
+        """获取今天 00:00 之后新增的缺陷"""
+        today_start = self._get_timestamp_ms(0)
+
+        sql = f"SELECT * FROM {self.safe_table} WHERE submitted_at >= ? ORDER BY submitted_at DESC"
+        rows = self.execute_dql(sql, (today_start,))
+        return [CodeBeamerDefect.model_validate(dict(row)) for row in rows]
+
+    def get_yesterday_defects(self) -> list[CodeBeamerDefect]:
+        """获取昨天 00:00 到 23:59 之间新增的缺陷"""
+        yesterday_start = self._get_timestamp_ms(-1)
+        today_start = self._get_timestamp_ms(0)
+
+        # 范围查询：大于等于昨天零点，且小于今天零点
+        sql = f"""
+            SELECT * FROM {self.safe_table} 
+            WHERE submitted_at >= ? AND submitted_at < ? 
+            ORDER BY submitted_at DESC
+        """
+        rows = self.execute_dql(sql, (yesterday_start, today_start))
+        return [CodeBeamerDefect.model_validate(dict(row)) for row in rows]
+
+    def get_active_defects_by_assignee(self, assignee_email: str) -> list[CodeBeamerDefect]:
+        """
+        获取指定负责人的进行中缺陷
+        逻辑：assigned_to 包含 assignee_name
+             且 status 不在 ('Cancel', 'Closed', 'Resolved') 中
+        """
+        # 使用 LIKE 实现“包含”
+        # 使用 NOT IN 排除已结束的状态
+        # 注意：这里的状态字符串建议与你 CodeBeamer 中的实际值保持一致（大小写敏感）
+        sql = f"""
+            SELECT * FROM {self.safe_table} 
+            WHERE assigned_to LIKE ? 
+            AND status NOT IN ('Cancelled', 'Closed')
+            ORDER BY modified_at DESC
+        """
+
+        # 构造模糊查询参数：%某人%
+        params = (f"%{assignee_email}%",)
+
+        rows = self.execute_dql(sql, params)
+
+        if not rows:
+            return []
+
+        # 转换为 Pydantic 模型列表
+        return [CodeBeamerDefect.model_validate(dict(row)) for row in rows]
 
     def _get_model_fields(self) -> list[str]:
         """获取模型的所有字段名，用于动态生成 SQL"""
@@ -367,17 +478,18 @@ class EmailDB(DBBase):
         create_sql = f"""
             CREATE TABLE IF NOT EXISTS {self.safe_table} (
                 short_name TEXT PRIMARY KEY, 
-                email TEXT NOT NULL
+                email TEXT NOT NULL,
+                feishu_userid
             )
         """
         return self.execute_ddl(create_sql)
 
-    def add_or_update_email(self, short_name: str, email: str) -> bool:
+    def add_or_update_email(self, short_name: str, email: str, feishu_userid: str = '') -> bool:
         """
         添加或更新邮件记录（使用 REPLACE 语法：如果主键冲突则覆盖）
         """
-        sql = f"REPLACE INTO {self.safe_table} (short_name, email) VALUES (?, ?)"
-        rowcount = self.execute_dml(sql, (short_name, email))
+        sql = f"REPLACE INTO {self.safe_table} (short_name, email, feishu_userid) VALUES (?, ?, ?)"
+        rowcount = self.execute_dml(sql, (short_name, email, feishu_userid))
         return rowcount is not None and rowcount > 0
 
     def get_email_by_name(self, short_name: str) -> Optional[str]:
@@ -404,11 +516,280 @@ class EmailDB(DBBase):
         return rowcount is not None and rowcount > 0
 
 
+class TestMemberDB(DBBase):
+    def __init__(self, db_path: str):
+        super().__init__(db_path)
+        self.table_name = TEST_MEMBERS_TABLE_NAME
+        self.safe_table = self._safe_table_name(self.table_name)
+        self.init_database()
+
+    def init_database(self) -> bool:
+        """
+        初始化表：email 设置为 UNIQUE，确保不会重复存储相同的邮箱
+        """
+        create_sql = f"""
+            CREATE TABLE IF NOT EXISTS {self.safe_table} (
+                id INTEGER PRIMARY KEY AUTOINCREMENT, 
+                email TEXT NOT NULL UNIQUE
+            )
+        """
+        return self.execute_ddl(create_sql)
+
+    # --- 增加 / 更新 ---
+    def add_email(self, email: str) -> bool:
+        """
+        添加新邮箱。如果邮箱已存在，由于 UNIQUE 约束，此操作会被忽略。
+        """
+        sql = f"INSERT OR IGNORE INTO {self.safe_table} (email) VALUES (?)"
+        rowcount = self.execute_dml(sql, (email,))
+        # 执行成功且没有报错（即使因为重复被 ignore 也会返回 rowcount）
+        return rowcount is not None
+
+    # --- 删除 ---
+    def delete_email(self, email: str) -> bool:
+        """
+        根据邮箱地址删除记录
+        """
+        sql = f"DELETE FROM {self.safe_table} WHERE email = ?"
+        rowcount = self.execute_dml(sql, (email,))
+        return rowcount is not None and rowcount > 0
+
+    # --- 查询 ---
+    def get_all_emails(self) -> List[str]:
+        """
+        获取所有邮箱列表，返回纯字符串列表，方便 PySide6 UI 组件使用
+        """
+        sql = f"SELECT email FROM {self.safe_table} ORDER BY email ASC"
+        results = self.execute_dql(sql)
+        if not results:
+            return []
+        # 将结果从 [{'email': 'a@b.com'}, ...] 转换为 ['a@b.com', ...]
+        return [row['email'] for row in results]
+
+    def is_email_exists(self, email: str) -> bool:
+        """
+        检查某个邮箱是否已经在数据库中
+        """
+        sql = f"SELECT 1 FROM {self.safe_table} WHERE email = ? LIMIT 1"
+        results = self.execute_dql(sql, (email,))
+        return len(results) > 0
+
+    def clear_all(self) -> bool:
+        """
+        清空所有成员记录
+        """
+        sql = f"DELETE FROM {self.safe_table}"
+        return self.execute_dml(sql) is not None
+
+
+class AdminMemberDB(DBBase):
+    def __init__(self, db_path: str):
+        super().__init__(db_path)
+        self.table_name = ADMIN_MEMBERS_TABLE_NAME
+        self.safe_table = self._safe_table_name(self.table_name)
+        self.init_database()
+
+    def init_database(self) -> bool:
+        """
+        初始化表：email 设置为 UNIQUE，确保不会重复存储相同的邮箱
+        """
+        create_sql = f"""
+            CREATE TABLE IF NOT EXISTS {self.safe_table} (
+                id INTEGER PRIMARY KEY AUTOINCREMENT, 
+                email TEXT NOT NULL UNIQUE
+            )
+        """
+        return self.execute_ddl(create_sql)
+
+    # --- 增加 / 更新 ---
+    def add_email(self, email: str) -> bool:
+        """
+        添加新邮箱。如果邮箱已存在，由于 UNIQUE 约束，此操作会被忽略。
+        """
+        sql = f"INSERT OR IGNORE INTO {self.safe_table} (email) VALUES (?)"
+        rowcount = self.execute_dml(sql, (email,))
+        # 执行成功且没有报错（即使因为重复被 ignore 也会返回 rowcount）
+        return rowcount is not None
+
+    # --- 删除 ---
+    def delete_email(self, email: str) -> bool:
+        """
+        根据邮箱地址删除记录
+        """
+        sql = f"DELETE FROM {self.safe_table} WHERE email = ?"
+        rowcount = self.execute_dml(sql, (email,))
+        return rowcount is not None and rowcount > 0
+
+    # --- 查询 ---
+    def get_all_emails(self) -> List[str]:
+        """
+        获取所有邮箱列表，返回纯字符串列表，方便 PySide6 UI 组件使用
+        """
+        sql = f"SELECT email FROM {self.safe_table} ORDER BY email ASC"
+        results = self.execute_dql(sql)
+        if not results:
+            return []
+        # 将结果从 [{'email': 'a@b.com'}, ...] 转换为 ['a@b.com', ...]
+        return [row['email'] for row in results]
+
+    def is_email_exists(self, email: str) -> bool:
+        """
+        检查某个邮箱是否已经在数据库中
+        """
+        sql = f"SELECT 1 FROM {self.safe_table} WHERE email = ? LIMIT 1"
+        results = self.execute_dql(sql, (email,))
+        return len(results) > 0
+
+    def clear_all(self) -> bool:
+        """
+        清空所有成员记录
+        """
+        sql = f"DELETE FROM {self.safe_table}"
+        return self.execute_dml(sql) is not None
+
+
+class SysMemberDB(DBBase):
+    def __init__(self, db_path: str):
+        super().__init__(db_path)
+        self.table_name = SYS_MEMBERS_TABLE_NAME
+        self.safe_table = self._safe_table_name(self.table_name)
+        self.init_database()
+
+    def init_database(self) -> bool:
+        """
+        初始化表：email 设置为 UNIQUE，确保不会重复存储相同的邮箱
+        """
+        create_sql = f"""
+            CREATE TABLE IF NOT EXISTS {self.safe_table} (
+                id INTEGER PRIMARY KEY AUTOINCREMENT, 
+                email TEXT NOT NULL UNIQUE
+            )
+        """
+        return self.execute_ddl(create_sql)
+
+    # --- 增加 / 更新 ---
+    def add_email(self, email: str) -> bool:
+        """
+        添加新邮箱。如果邮箱已存在，由于 UNIQUE 约束，此操作会被忽略。
+        """
+        sql = f"INSERT OR IGNORE INTO {self.safe_table} (email) VALUES (?)"
+        rowcount = self.execute_dml(sql, (email,))
+        # 执行成功且没有报错（即使因为重复被 ignore 也会返回 rowcount）
+        return rowcount is not None
+
+    # --- 删除 ---
+    def delete_email(self, email: str) -> bool:
+        """
+        根据邮箱地址删除记录
+        """
+        sql = f"DELETE FROM {self.safe_table} WHERE email = ?"
+        rowcount = self.execute_dml(sql, (email,))
+        return rowcount is not None and rowcount > 0
+
+    # --- 查询 ---
+    def get_all_emails(self) -> List[str]:
+        """
+        获取所有邮箱列表，返回纯字符串列表，方便 PySide6 UI 组件使用
+        """
+        sql = f"SELECT email FROM {self.safe_table} ORDER BY email ASC"
+        results = self.execute_dql(sql)
+        if not results:
+            return []
+        # 将结果从 [{'email': 'a@b.com'}, ...] 转换为 ['a@b.com', ...]
+        return [row['email'] for row in results]
+
+    def is_email_exists(self, email: str) -> bool:
+        """
+        检查某个邮箱是否已经在数据库中
+        """
+        sql = f"SELECT 1 FROM {self.safe_table} WHERE email = ? LIMIT 1"
+        results = self.execute_dql(sql, (email,))
+        return len(results) > 0
+
+    def clear_all(self) -> bool:
+        """
+        清空所有成员记录
+        """
+        sql = f"DELETE FROM {self.safe_table}"
+        return self.execute_dml(sql) is not None
+
+
+class SwMemberDB(DBBase):
+    def __init__(self, db_path: str):
+        super().__init__(db_path)
+        self.table_name = SW_MEMBERS_TABLE_NAME
+        self.safe_table = self._safe_table_name(self.table_name)
+        self.init_database()
+
+    def init_database(self) -> bool:
+        """
+        初始化表：email 设置为 UNIQUE，确保不会重复存储相同的邮箱
+        """
+        create_sql = f"""
+            CREATE TABLE IF NOT EXISTS {self.safe_table} (
+                id INTEGER PRIMARY KEY AUTOINCREMENT, 
+                email TEXT NOT NULL UNIQUE
+            )
+        """
+        return self.execute_ddl(create_sql)
+
+    # --- 增加 / 更新 ---
+    def add_email(self, email: str) -> bool:
+        """
+        添加新邮箱。如果邮箱已存在，由于 UNIQUE 约束，此操作会被忽略。
+        """
+        sql = f"INSERT OR IGNORE INTO {self.safe_table} (email) VALUES (?)"
+        rowcount = self.execute_dml(sql, (email,))
+        # 执行成功且没有报错（即使因为重复被 ignore 也会返回 rowcount）
+        return rowcount is not None
+
+    # --- 删除 ---
+    def delete_email(self, email: str) -> bool:
+        """
+        根据邮箱地址删除记录
+        """
+        sql = f"DELETE FROM {self.safe_table} WHERE email = ?"
+        rowcount = self.execute_dml(sql, (email,))
+        return rowcount is not None and rowcount > 0
+
+    # --- 查询 ---
+    def get_all_emails(self) -> List[str]:
+        """
+        获取所有邮箱列表，返回纯字符串列表，方便 PySide6 UI 组件使用
+        """
+        sql = f"SELECT email FROM {self.safe_table} ORDER BY email ASC"
+        results = self.execute_dql(sql)
+        if not results:
+            return []
+        # 将结果从 [{'email': 'a@b.com'}, ...] 转换为 ['a@b.com', ...]
+        return [row['email'] for row in results]
+
+    def is_email_exists(self, email: str) -> bool:
+        """
+        检查某个邮箱是否已经在数据库中
+        """
+        sql = f"SELECT 1 FROM {self.safe_table} WHERE email = ? LIMIT 1"
+        results = self.execute_dql(sql, (email,))
+        return len(results) > 0
+
+    def clear_all(self) -> bool:
+        """
+        清空所有成员记录
+        """
+        sql = f"DELETE FROM {self.safe_table}"
+        return self.execute_dml(sql) is not None
+
+
 class DBManager:
     def __init__(self, db_path: str):
         self.db_path = db_path
         self.defects_db: DefectsDB = DefectsDB(self.db_path)
         self.info_db: InfoDB = InfoDB(self.db_path)
         self.scheduler_db: SchedulerDB = SchedulerDB(self.db_path)
-        self.email_db: EmailDB = EmailDB(self.db_path)
+        self.update_time_db: UpdateTimeDB = UpdateTimeDB(self.db_path)
+        # self.email_db: EmailDB = EmailDB(self.db_path)
+        # self.sys_member_db: SysMemberDB = SysMemberDB(self.db_path)
+        # self.sw_member_db: SwMemberDB = SwMemberDB(self.db_path)
+        # self.test_member_db: TestMemberDB = TestMemberDB(self.db_path)
+        # self.admin_member_db: AdminMemberDB = AdminMemberDB(self.db_path)
 

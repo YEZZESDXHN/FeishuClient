@@ -1,5 +1,6 @@
 import json
 import logging
+import os
 from typing import Optional
 from pathlib import Path
 import urllib3
@@ -24,6 +25,25 @@ from app.user_data import CodeBeamerDefect
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
 logger = logging.getLogger('FeishuClient.' + __name__)
+
+class QtSignaler(QObject):
+    """用于发出信号的辅助类，确保线程安全"""
+    log_signal = Signal(str)
+
+
+class QtLoggingHandler(logging.Handler):
+    def __init__(self, slot_func):
+        super().__init__()
+        self.signaler = QtSignaler()
+        # 将信号连接到传入的 UI 更新函数（比如 textEdit.append）
+        self.signaler.log_signal.connect(slot_func)
+
+    def emit(self, record):
+        # 格式化日志内容
+        msg = self.format(record)
+        print('def emit(self, record):')
+        # 通过信号发射出去，Qt 会自动处理跨线程 UI 更新
+        self.signaler.log_signal.emit(msg)
 
 
 class QWsClient(QObject, WsClient):
@@ -149,14 +169,66 @@ class QRunner(QObject):
             feishu_items.append(feishu_item)
         return feishu_items
 
+    def send_assigned_notify(self, members, title):
+        feishu_client = self.parent.feishu_client
+        if not members:
+            logger.warning(f"团队成员为空")
+            return
+        defect_db = self.parent.db_manager.defects_db
+        update_time = self.parent.db_manager.update_time_db.get_update_time()
+        for test_member in members:
+            defects = defect_db.get_active_defects_by_assignee(test_member)
+            if defects:
+                content = {
+                    'zh_cn': {
+                        'title': f'{title} 数量:{len(defects)}',
+                        "content": []
+                    }
+                }
+                defect_content = content['zh_cn']['content']
+                defect_content.append([{
+                    "tag": "text",
+                    "text": f"数据同步时间：{update_time}"
+                }])
+                for defect in defects:
+                    defect_content.append([{"tag": "hr"}])
+                    defect_content.append([
+                        {
+                            "tag": "a",
+                            "href": f"https://cb.alm.vnet.valeo.com/cb/issue/{defect.defect_id}",
+                            "text": f"{defect.defect_id}  ",
+                            "style": ["bold", "italic"]
+                        },
+                        {
+                            "tag": "text",
+                            "text": f"{defect.summary}"
+                        },
+                    ])
+                    defect_content.append([
+                        {
+                            "tag": "text",
+                            "text": f"修复版本：{defect.fixed_in_release}"
+                        }
+                    ])
+
+                feishu_client.send_message(
+                    receive_id_type='email',
+                    receive_id=test_member,
+                    msg_type='post',
+                    content=content
+                )
+
     def send_assigned_to_test_notify(self):
-        pass
+        members = self.parent.test_members
+        self.send_assigned_notify(members, '以下为Assigned给你的Bug，请注意及时验证并更改状态！')
 
     def send_assigned_to_sys_notify(self):
-        pass
+        members = self.parent.test_members
+        self.send_assigned_notify(members, '以下为Assigned给你的Bug，请注意及时验证并更改状态！')
 
     def send_assigned_to_sw_notify(self):
-        pass
+        members = self.parent.test_members
+        self.send_assigned_notify(members, '以下为Assigned给你的Bug，请注意及时验证并更改状态！')
 
     def send_added_today_notify(self):
         pass
@@ -171,7 +243,9 @@ class QRunner(QObject):
             feishu_client.client_init()
         if code_beamer_client.client._authenticated or code_beamer_client.client.authenticate():
             try:
-                project_id = 873
+
+                project_id = self.parent.cb_projects[self.parent.comboBox_CBProject.currentIndex()]['id']
+
                 tracker_id = code_beamer_client.get_tracker_id_by_name('Defect', project_id)
                 items = code_beamer_client.get_all_items_by_query(tracker_id=tracker_id, filter_active=False)
                 defs = code_beamer_client.convert_defect_items(items)
@@ -239,6 +313,7 @@ class QRunner(QObject):
                 )
                 return
 
+            self.parent.db_manager.update_time_db.set_now()
             feishu_client.message_api.send_message(
                 receive_id_type='email',
                 receive_id='zhichen.wang@valeo.com',
@@ -281,6 +356,24 @@ class MainWindow(QMainWindow, Ui_MainWindow):
 
     def __init__(self):
         super().__init__()
+        self.setupUi(self)
+
+        self.qt_logging_handler = QtLoggingHandler(self.textEdit.append)
+        self.qt_logging_handler.setLevel(logging.INFO)
+        formatter = logging.Formatter('%(asctime)s [%(levelname)s] %(name)s : %(message)s')
+        self.qt_logging_handler.setFormatter(formatter)
+        feishu_logger = logging.getLogger('FeishuClient')
+        lark_logger = logging.getLogger('Lark')
+        apscheduler_logger = logging.getLogger('apscheduler')
+        feishu_logger.addHandler(self.qt_logging_handler)
+        lark_logger.addHandler(self.qt_logging_handler)
+        apscheduler_logger.addHandler(self.qt_logging_handler)
+
+        self.test_members = []
+        self.sw_members = []
+        self.sys_members = []
+        self.admin_members = []
+
         self.job_name_map = {
             "同步Defects": self.signal_job_sync_defects,
             '给测试团队发送assigned票通知': self.signal_job_send_assigned_to_test_notify,
@@ -290,7 +383,6 @@ class MainWindow(QMainWindow, Ui_MainWindow):
             "昨日新增票通知": self.signal_job_send_added_yesterday_notify,
             "test": self.signal_job_test,
         }
-        self.setupUi(self)
         self.scheduler = QtScheduler()
         self.scheduler.start()
         self.check_ws_client_state_timer = QTimer()
@@ -303,6 +395,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         self.db_manager: Optional[DBManager] = None
         self.init_database(self.db_path)
         self.init_scheduler_jobs()
+        self.cb_projects: list[dict] = []
         self.cb_username: str = ''
         self.cb_password: str = '.'
 
@@ -322,7 +415,30 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         self._codebeamer_init()
         self._runner_init()
         self.signal_connect()
+        self.load_members()
         self.init_ui()
+
+    def load_members(self):
+        """读取 config 文件到全局变量"""
+        member_config_path = './config/team_members.json'
+        if not os.path.exists(member_config_path):
+            self.test_members = []
+            self.sw_members = []
+            self.sys_members = []
+            self.admin_members = []
+
+        try:
+            with open(member_config_path, 'r', encoding='utf-8') as f:
+                members = json.load(f)
+                self.test_members = members['test_members']
+                self.sw_members = members['sw_members']
+                self.sys_members = members['sys_members']
+                self.admin_members = members['admin_members']
+        except (json.JSONDecodeError, IOError):
+            self.test_members = []
+            self.sw_members = []
+            self.sys_members = []
+            self.admin_members = []
 
     def setup_scheduler_jobs_table(self):
         layout = self.tab_scheduler.layout()
@@ -525,6 +641,8 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         self.pushButton_RefreshDataTable.clicked.connect(self.update_feishu_bitable_url)
         self.feishu_client.signal_init_finish.connect(self.check_feishu_client_state)
         self.pushButton_ManualTrigger.clicked.connect(self.manual_trigger_job)
+        self.pushButton_GetProject.clicked.connect(self.cb_client.get_projects)
+        self.cb_client.signal_projects.connect(self.update_cb_project)
 
         # jobs
         self.signal_job_sync_defects.connect(self.runner.sync_code_beamer_defect_to_feishu)
@@ -534,6 +652,13 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         self.signal_job_send_added_today_notify.connect(self.runner.send_added_today_notify)
         self.signal_job_send_added_yesterday_notify.connect(self.runner.send_added_yesterday_notify)
         self.signal_job_test.connect(self.runner.test_job)
+
+    def update_cb_project(self, projects):
+        self.cb_projects = projects
+        projects_name_list = [project['name'] for project in self.cb_projects]
+        self.comboBox_CBProject.clear()
+        self.comboBox_CBProject.addItems(projects_name_list)
+
 
     def update_cb_username(self):
         self.cb_username = self.lineEdit_Username.text()
@@ -588,27 +713,27 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         if self.runner_thread:
             self.runner_thread.quit()
             if self.runner_thread.wait(3000):  # 等待3秒超时
-                logger.info("runner_thread线程已正常停止")
+                logger.debug("runner_thread线程已正常停止")
             else:
                 logger.warning("runner_thread线程强制退出")
 
         if self.cb_client_thread:
             self.cb_client_thread.quit()
             if self.cb_client_thread.wait(3000):  # 等待3秒超时
-                logger.info("cb_client_thread线程已正常停止")
+                logger.debug("cb_client_thread线程已正常停止")
             else:
                 logger.warning("cb_client_thread线程强制退出")
 
         if self.feishu_client_thread:
             self.feishu_client_thread.quit()
             if self.feishu_client_thread.wait(3000):  # 等待3秒超时
-                logger.info("feishu_client_thread线程已正常停止")
+                logger.debug("feishu_client_thread线程已正常停止")
             else:
                 logger.warning("feishu_client_thread线程强制退出")
 
         if self.feishu_ws_client_thread:
             self.feishu_ws_client_thread.quit()
             if self.feishu_ws_client_thread.wait(3000):  # 等待3秒超时
-                logger.info("feishu_ws_client_thread线程已正常停止")
+                logger.debug("feishu_ws_client_thread线程已正常停止")
             else:
                 logger.warning("feishu_ws_client_thread线程强制退出")

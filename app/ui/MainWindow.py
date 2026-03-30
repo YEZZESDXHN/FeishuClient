@@ -173,14 +173,24 @@ class Ui_MainWindow(object):
 
         self.horizontalLayout_6 = QHBoxLayout()
         self.horizontalLayout_6.setObjectName(u"horizontalLayout_6")
-        self.horizontalSpacer = QSpacerItem(40, 20, QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Minimum)
+        self.label_8 = QLabel(self.groupBox)
+        self.label_8.setObjectName(u"label_8")
+        sizePolicy1.setHeightForWidth(self.label_8.sizePolicy().hasHeightForWidth())
+        self.label_8.setSizePolicy(sizePolicy1)
 
-        self.horizontalLayout_6.addItem(self.horizontalSpacer)
+        self.horizontalLayout_6.addWidget(self.label_8)
 
-        self.pushButton_CBTest = QPushButton(self.groupBox)
-        self.pushButton_CBTest.setObjectName(u"pushButton_CBTest")
+        self.comboBox_CBProject = QComboBox(self.groupBox)
+        self.comboBox_CBProject.setObjectName(u"comboBox_CBProject")
 
-        self.horizontalLayout_6.addWidget(self.pushButton_CBTest)
+        self.horizontalLayout_6.addWidget(self.comboBox_CBProject)
+
+        self.pushButton_GetProject = QPushButton(self.groupBox)
+        self.pushButton_GetProject.setObjectName(u"pushButton_GetProject")
+        sizePolicy1.setHeightForWidth(self.pushButton_GetProject.sizePolicy().hasHeightForWidth())
+        self.pushButton_GetProject.setSizePolicy(sizePolicy1)
+
+        self.horizontalLayout_6.addWidget(self.pushButton_GetProject)
 
 
         self.verticalLayout.addLayout(self.horizontalLayout_6)
@@ -292,7 +302,7 @@ class Ui_MainWindow(object):
         MainWindow.setCentralWidget(self.centralwidget)
         self.menubar = QMenuBar(MainWindow)
         self.menubar.setObjectName(u"menubar")
-        self.menubar.setGeometry(QRect(0, 0, 697, 22))
+        self.menubar.setGeometry(QRect(0, 0, 697, 33))
         MainWindow.setMenuBar(self.menubar)
 
         self.retranslateUi(MainWindow)
@@ -313,7 +323,8 @@ class Ui_MainWindow(object):
         self.groupBox.setTitle(QCoreApplication.translate("MainWindow", u"CodeBearm", None))
         self.label.setText(QCoreApplication.translate("MainWindow", u"\u8d26\u53f7\uff1a", None))
         self.label_2.setText(QCoreApplication.translate("MainWindow", u"\u5bc6\u7801\uff1a", None))
-        self.pushButton_CBTest.setText(QCoreApplication.translate("MainWindow", u"\u6d4b\u8bd5", None))
+        self.label_8.setText(QCoreApplication.translate("MainWindow", u"\u9879\u76ee\uff1a", None))
+        self.pushButton_GetProject.setText(QCoreApplication.translate("MainWindow", u"\u5237\u65b0", None))
         self.label_5.setText(QCoreApplication.translate("MainWindow", u"\u591a\u7ef4\u8868\u683c\uff1a", None))
         self.label_6.setText(QCoreApplication.translate("MainWindow", u"\u6570\u636e\u8868", None))
         self.pushButton_RefreshDataTable.setText(QCoreApplication.translate("MainWindow", u"\u5237\u65b0", None))

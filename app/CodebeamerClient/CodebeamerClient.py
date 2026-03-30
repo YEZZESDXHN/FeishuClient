@@ -162,12 +162,14 @@ class CodebeamerClient:
     项目特定的功能扩展
     """
 
-    def __init__(self, username, password, base_url: str = "https://cb.alm.vnet.valeo.com"):
+    def __init__(self, username, password,
+                 base_url: str = "https://cb.alm.vnet.valeo.com",
+                 email_cache_path='./config/email_cache.json'):
         """
         初始化项目实例
         """
         self.email_cache = {}
-        self.email_cache_path = 'email_cache.json'
+        self.email_cache_path = email_cache_path
         self.load_emails()
         self.username = username
         self.password = password
