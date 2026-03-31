@@ -273,18 +273,19 @@ class QRunner(QObject):
         update_time = self.parent.db_manager.update_time_db.get_update_time()
         try:
             defects = self.parent.db_manager.defects_db.get_today_defects()
-            if defects:
-                content = {
-                    'zh_cn': {
-                        'title': f'今日新增Defects数量:{len(defects)}',
-                        "content": []
-                    }
+
+            content = {
+                'zh_cn': {
+                    'title': f'今日新增Defects数量:{len(defects)}',
+                    "content": []
                 }
-                defect_content = content['zh_cn']['content']
-                defect_content.append([{
-                    "tag": "text",
-                    "text": f"数据同步时间：{update_time}"
-                }])
+            }
+            defect_content = content['zh_cn']['content']
+            defect_content.append([{
+                "tag": "text",
+                "text": f"数据同步时间：{update_time}"
+            }])
+            if defects:
                 for defect in defects:
                     defect_content.append([{"tag": "hr"}])
                     defect_content.append([
@@ -310,13 +311,13 @@ class QRunner(QObject):
                         },
                     ])
 
-                feishu_client.send_message(
-                    receive_id_type='chat_id',
-                    receive_id=chat_id,
-                    msg_type='post',
-                    content=content
-                )
-                logger.info(f"发送今日新增defects执行完毕")
+            feishu_client.send_message(
+                receive_id_type='chat_id',
+                receive_id=chat_id,
+                msg_type='post',
+                content=content
+            )
+            logger.info(f"发送今日新增defects执行完毕")
 
         except Exception as e:
             logger.error(f"send_added_today_notify执行失败，{e}")
@@ -331,18 +332,19 @@ class QRunner(QObject):
         update_time = self.parent.db_manager.update_time_db.get_update_time()
         try:
             defects = self.parent.db_manager.defects_db.get_yesterday_defects()
-            if defects:
-                content = {
-                    'zh_cn': {
-                        'title': f'今日新增Defects数量:{len(defects)}',
-                        "content": []
-                    }
+
+            content = {
+                'zh_cn': {
+                    'title': f'今日新增Defects数量:{len(defects)}',
+                    "content": []
                 }
-                defect_content = content['zh_cn']['content']
-                defect_content.append([{
-                    "tag": "text",
-                    "text": f"数据同步时间：{update_time}"
-                }])
+            }
+            defect_content = content['zh_cn']['content']
+            defect_content.append([{
+                "tag": "text",
+                "text": f"数据同步时间：{update_time}"
+            }])
+            if defects:
                 for defect in defects:
                     defect_content.append([{"tag": "hr"}])
                     defect_content.append([
@@ -368,13 +370,13 @@ class QRunner(QObject):
                         },
                     ])
 
-                feishu_client.send_message(
-                    receive_id_type='chat_id',
-                    receive_id=chat_id,
-                    msg_type='post',
-                    content=content
-                )
-                logger.info(f"发送昨日新增defects执行完毕")
+            feishu_client.send_message(
+                receive_id_type='chat_id',
+                receive_id=chat_id,
+                msg_type='post',
+                content=content
+            )
+            logger.info(f"发送昨日新增defects执行完毕")
 
         except Exception as e:
             logger.error(f"send_added_yesterday_notify执行失败，{e}")
