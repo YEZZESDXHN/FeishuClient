@@ -49,12 +49,8 @@ class CodebeamerLoginer:
         """
         执行登录认证
         """
-        print("=" * 60)
-        print("Codebeamer 自动化认证")
-        print("=" * 60)
-
         if not all([self.username, self.password]):
-            print("❌ 认证失败：未提供用户名或密码。")
+            logger.error("认证失败：未提供用户名或密码。")
             return False
 
         login_url = f"{self.cb_base}/login.spr"
@@ -64,8 +60,6 @@ class CodebeamerLoginer:
             'targetURL': '/user'
         }
 
-        print(f"正在登录用户: {self.username}...")
-
         try:
             response = self.session.post(
                 login_url,
@@ -74,11 +68,8 @@ class CodebeamerLoginer:
                 headers={'Content-Type': 'application/x-www-form-urlencoded'}
             )
 
-            print(f"登录响应状态码: {response.status_code}")
-
             if response.status_code == 302:
                 redirect_to = response.headers.get('Location', '')
-                print(f"✅ 登录成功！重定向至: {redirect_to}")
 
                 if response.cookies:
                     self.session.cookies.update(response.cookies)
@@ -91,12 +82,12 @@ class CodebeamerLoginer:
                 self._authenticated = True
                 return True
             else:
-                print(f"❌ 登录失败，状态码: {response.status_code}")
+                logger.error(f"登录失败，状态码: {response.status_code}")
                 self._authenticated = False
                 return False
 
         except Exception as e:
-            print(f"❌ 认证过程出错: {e}")
+            logger.error(f"认证过程出错: {e}")
             return False
 
     def _prepare_api_headers(self):

@@ -3,24 +3,52 @@ import logging
 import os
 from typing import Optional
 from pathlib import Path
+
+import requests
 import urllib3
 from PySide6.QtCore import QObject, QThread, Signal, QTimer
 from PySide6.QtWidgets import QMainWindow, QVBoxLayout
 from apscheduler.schedulers.qt import QtScheduler
 from apscheduler.triggers.cron import CronTrigger
+from requests.adapters import HTTPAdapter
+from urllib3 import Retry
 
 from app.CodebeamerClient.CodebeamerDefectClient import QCodebeamerDefectClient
 from app.DBManager.DBManager import DBManager
 from app.resources.resources import IconEngine
 from app.windows.SchedulerJobsTable import SchedulerJobsTable
-from lark_oapi.api.im.v1 import P2ImMessageReceiveV1
 
-# from app.FeishuApi.CustomEventDispatcherHandler import EventDispatcherHandler
-from lark_oapi import EventDispatcherHandler
 from app.FeishuApi.FeishuApiClient import FeishuApiClient
 from app.FeishuApi.FeishuWsClient import WsClient
 from app.ui.MainWindow import Ui_MainWindow
 from app.user_data import CodeBeamerDefect
+
+feishu_session = requests.Session()
+
+# 2. 配置重试策略 (针对底层的连接失败、握手超时自动重试)
+# backoff_factor=1 表示重试间隔为 1s, 2s, 4s...
+retry_strategy = Retry(
+    total=3,  # 最多重试 3 次
+    backoff_factor=1,
+    status_forcelist=[429, 500, 502, 503, 504], # 遇到飞书网关报错也重试
+    allowed_methods=["HEAD", "GET", "OPTIONS", "POST", "PUT", "DELETE"] # 允许重试的方法
+)
+
+# 3. 配置连接池大小 (20 个连接足够应付高频的批量操作)
+adapter = HTTPAdapter(
+    pool_connections=20,
+    pool_maxsize=20,
+    max_retries=retry_strategy
+)
+feishu_session.mount('https://', adapter)
+feishu_session.mount('http://', adapter)
+
+# 4. 【核心魔法】偷天换日，接管 requests 的默认 request 方法
+requests.request = feishu_session.request
+
+from lark_oapi.api.im.v1 import P2ImMessageReceiveV1
+# from app.FeishuApi.CustomEventDispatcherHandler import EventDispatcherHandler
+from lark_oapi import EventDispatcherHandler
 
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
@@ -355,9 +383,10 @@ class QRunner(QObject):
         logger.info(f"开始执行Defects同步...")
         code_beamer_client = self.parent.cb_client
         feishu_client = self.parent.feishu_client
+        admin_email = self.parent.admin_members[0]
         if not feishu_client.client:
             feishu_client.client_init()
-        if code_beamer_client.client.authenticate():
+        if code_beamer_client.client.is_authenticated() or code_beamer_client.client.authenticate():
             try:
 
                 project_id = self.parent.cb_projects[self.parent.comboBox_CBProject.currentIndex()]['id']
@@ -368,9 +397,11 @@ class QRunner(QObject):
                 result = self.parent.db_manager.defects_db.batch_upsert_defects(defs)
             except Exception as e:
                 logger.error(f'获取CB Defect失败，{e}')
+                if not admin_email:
+                    return
                 feishu_client.message_api.send_message(
                     receive_id_type='email',
-                    receive_id='zhichen.wang@valeo.com',
+                    receive_id=admin_email,
                     msg_type='text',
                     content={'text': f"Defect同步失败"}
                 )
@@ -390,9 +421,11 @@ class QRunner(QObject):
             except Exception as e:
                 table_index = self.parent.comboBox_BitableDateTable.currentIndex()
                 logger.error(f"获取多维表格数据表{self.parent.feishu_bitable_tables[table_index]['name']}记录失败，{e}")
+                if not admin_email:
+                    return
                 feishu_client.message_api.send_message(
                     receive_id_type='email',
-                    receive_id='zhichen.wang@valeo.com',
+                    receive_id=admin_email,
                     msg_type='text',
                     content={'text': f"Defect同步失败"}
                 )
@@ -409,9 +442,11 @@ class QRunner(QObject):
                 )
             except Exception as e:
                 logger.error(f"删除多维表格数据失败，{e}")
+                if not admin_email:
+                    return
                 feishu_client.message_api.send_message(
                     receive_id_type='email',
-                    receive_id='zhichen.wang@valeo.com',
+                    receive_id=admin_email,
                     msg_type='text',
                     content={'text': f"Defect同步失败"}
                 )
@@ -424,22 +459,26 @@ class QRunner(QObject):
                     records=records)
             except Exception as e:
                 logger.error(f"同步多维表格数据失败，{e}")
+                if not admin_email:
+                    return
                 feishu_client.message_api.send_message(
                     receive_id_type='email',
-                    receive_id='zhichen.wang@valeo.com',
+                    receive_id=admin_email,
                     msg_type='text',
                     content={'text': f"Defect同步失败"}
                 )
                 return
 
             self.parent.db_manager.update_time_db.set_now()
+            logger.info(f"Defects同步已完成")
+            if not admin_email:
+                return
             feishu_client.message_api.send_message(
                 receive_id_type='email',
-                receive_id='zhichen.wang@valeo.com',
+                receive_id=admin_email,
                 msg_type='text',
                 content={'text': f"Defect同步成功，{result}"}
             )
-            logger.info(f"Defects同步已完成")
 
     def test_job(self):
         feishu_client = self.parent.feishu_client

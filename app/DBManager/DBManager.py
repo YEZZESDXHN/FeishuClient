@@ -304,7 +304,7 @@ class DefectsDB(DBBase):
         """
         target_date = date.today() + timedelta(days=days_offset)
         dt = datetime.combine(target_date, datetime.min.time())
-        return int(dt.timestamp() * 1000)
+        return int(dt.timestamp() * 1000 + 28800000)
 
     def get_today_defects(self) -> list[CodeBeamerDefect]:
         """获取今天 00:00 之后新增的缺陷"""
