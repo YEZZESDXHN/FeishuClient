@@ -22,7 +22,7 @@ class QCodebeamerDefectClient(QObject, CodebeamerClient):
             defect.summary = item['name']
             defect.assigned_to_email = ",".join(self.get_email(_item['name'])[1] for _item in item['assignedTo'] if self.get_email(_item['name']))
             defect.assigned_to = ",".join(self.get_email(_item['name'])[0] for _item in item['assignedTo'] if self.get_email(_item['name']))
-            defect.modified_at = self.convert_iso_to_unix(item['modifiedAt']) + 28800000
+            defect.modified_at = self.convert_iso_to_unix(item['modifiedAt'])
             # print(f"modifiedAt:{item['modifiedAt']},unix:{self.convert_iso_to_unix(item['modifiedAt'])}")
             defect.modified_by_email = self.get_email(item['modifiedBy']['name'])[1]
             defect.modified_by = self.get_email(item['modifiedBy']['name'])[0]
@@ -48,7 +48,7 @@ class QCodebeamerDefectClient(QObject, CodebeamerClient):
             defect.owner = ",".join(self.get_email(_item['name'])[0] for _item in item['owners'] if self.get_email(_item['name']))
             defect.submitted_by_email = self.get_email(item['createdBy']['name'])[1]
             defect.submitted_by = self.get_email(item['createdBy']['name'])[0]
-            defect.submitted_at = self.convert_iso_to_unix(item['createdAt']) + 28800000
+            defect.submitted_at = self.convert_iso_to_unix(item['createdAt'])
             defect_list.append(defect)
         return defect_list
 

@@ -218,19 +218,26 @@ class QRunner(QObject):
                 )
 
     def send_assigned_to_test_notify(self):
+        logger.info(f"开始执行job,给测试团队发送assigned通知...")
         members = self.parent.test_members
         self.send_assigned_notify(members, '以下为Assigned给你的Bug，请注意及时验证并更改状态！')
+        logger.info(f"测试团队发送assigned通知执行完毕")
 
     def send_assigned_to_sys_notify(self):
+        logger.info(f"开始执行job,给系统团队发送assigned通知...")
         members = self.parent.test_members
         self.send_assigned_notify(members, '以下为Assigned给你的Bug，请注意及时验证并更改状态！')
+        logger.info(f"系统团队发送assigned通知执行完毕")
 
     def send_assigned_to_sw_notify(self):
+        logger.info(f"开始执行job,给软件团队发送assigned通知...")
         members = self.parent.test_members
         self.send_assigned_notify(members, '以下为Assigned给你的Bug，请注意及时验证并更改状态！')
+        logger.info(f"软件团队发送assigned通知执行完毕")
 
     def send_added_today_notify(self):
         chat_id = self.parent.group_chat_id
+        logger.info(f"开始执行job,群发今日新增defects,chat_id:{chat_id}...")
         if not chat_id:
             logger.warning(f"未定义group chat id")
             return
@@ -281,12 +288,14 @@ class QRunner(QObject):
                     msg_type='post',
                     content=content
                 )
+                logger.info(f"发送今日新增defects执行完毕")
 
         except Exception as e:
             logger.error(f"send_added_today_notify执行失败，{e}")
 
     def send_added_yesterday_notify(self):
         chat_id = self.parent.group_chat_id
+        logger.info(f"开始执行job,群发昨日新增defects,chat_id:{chat_id}...")
         if not chat_id:
             logger.warning(f"未定义group chat id")
             return
@@ -337,11 +346,13 @@ class QRunner(QObject):
                     msg_type='post',
                     content=content
                 )
+                logger.info(f"发送昨日新增defects执行完毕")
 
         except Exception as e:
             logger.error(f"send_added_yesterday_notify执行失败，{e}")
 
     def sync_code_beamer_defect_to_feishu(self):
+        logger.info(f"开始执行Defects同步...")
         code_beamer_client = self.parent.cb_client
         feishu_client = self.parent.feishu_client
         if not feishu_client.client:
@@ -373,6 +384,9 @@ class QRunner(QObject):
                     table_id=table_id,
                     field_names=['Status']
                 )
+                if not feishu_items:
+                    logger.error(f'获取飞书记录失败')
+                    return
             except Exception as e:
                 table_index = self.parent.comboBox_BitableDateTable.currentIndex()
                 logger.error(f"获取多维表格数据表{self.parent.feishu_bitable_tables[table_index]['name']}记录失败，{e}")
@@ -425,6 +439,7 @@ class QRunner(QObject):
                 msg_type='text',
                 content={'text': f"Defect同步成功，{result}"}
             )
+            logger.info(f"Defects同步已完成")
 
     def test_job(self):
         feishu_client = self.parent.feishu_client
