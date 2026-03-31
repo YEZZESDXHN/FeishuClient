@@ -3,6 +3,13 @@ on:
   push:
     tags:
       - 'v*.*'
+      
+# ==========================================
+# 显式赋予触发其他工作流的权限
+# ==========================================
+permissions:
+  actions: write    # 允许使用 gh workflow run
+  contents: read    # 允许读取基础的仓库信息
 
 jobs:
   dispatch:
