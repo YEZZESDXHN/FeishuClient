@@ -96,8 +96,6 @@ jobs:
             --output-filename=${{ env.APP_NAME }}.exe `
             --enable-plugin=pyside6 `
             --windows-console-mode=attach `
-            --show-progress `
-            --show-memory `
             --include-data-files="${{ github.workspace }}/README.md=README.md" `
             --include-data-files="${{ github.workspace }}/config/logging.conf=config\logging.conf" `
             --include-data-files="${{ github.workspace }}/config/team_members.json=config\team_members.json" `
