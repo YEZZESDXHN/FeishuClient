@@ -1,3 +1,4 @@
+import logging
 from datetime import datetime
 import json
 import os
@@ -6,6 +7,7 @@ import time
 from typing import Optional, Dict, List, Any
 
 import requests
+logger = logging.getLogger('FeishuClient.' + __name__)
 
 
 class CodebeamerLoginer:
@@ -213,7 +215,7 @@ class CodebeamerClient:
             print(f"  ✅ 成功获取 {len(trackers)} 个 Tracker。")
             return trackers
         except Exception as e:
-            print(f"  ❌ 获取 Tracker 列表失败: {e}")
+            logger.error(f"  ❌ 获取 Tracker 列表失败: {e}")
             return []
 
     def get_tracker_id_by_name(self, tracker_name: str, project_id: int = None) -> int:

@@ -357,7 +357,7 @@ class QRunner(QObject):
         feishu_client = self.parent.feishu_client
         if not feishu_client.client:
             feishu_client.client_init()
-        if code_beamer_client.client._authenticated or code_beamer_client.client.authenticate():
+        if code_beamer_client.client.authenticate():
             try:
 
                 project_id = self.parent.cb_projects[self.parent.comboBox_CBProject.currentIndex()]['id']
