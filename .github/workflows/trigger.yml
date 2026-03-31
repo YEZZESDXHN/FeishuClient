@@ -1,0 +1,16 @@
+name: Trigger Build on Tag
+on:
+  push:
+    tags:
+      - 'v*.*'
+
+jobs:
+  dispatch:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Trigger main branch build
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        # 利用 gh 命令，告诉 main 分支去运行 build.yml，并把当前的 tag 传过去
+        run: |
+          gh workflow run nuitka_compile.yml --ref main -f release_tag=${{ github.ref_name }} --repo ${{ github.repository }}
