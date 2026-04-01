@@ -335,7 +335,7 @@ class QRunner(QObject):
 
             content = {
                 'zh_cn': {
-                    'title': f'今日新增Defects数量:{len(defects)}',
+                    'title': f'昨日新增Defects数量:{len(defects)}',
                     "content": []
                 }
             }
