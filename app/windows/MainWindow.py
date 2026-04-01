@@ -1,6 +1,7 @@
 import json
 import logging
 import os
+import uuid
 from typing import Optional
 from pathlib import Path
 
@@ -47,8 +48,10 @@ feishu_session.mount('http://', adapter)
 requests.request = feishu_session.request
 
 from lark_oapi.api.im.v1 import P2ImMessageReceiveV1
+from lark_oapi.api.application.v6 import P2ApplicationBotMenuV6
 # from app.FeishuApi.CustomEventDispatcherHandler import EventDispatcherHandler
 from lark_oapi import EventDispatcherHandler
+from lark_oapi.api.contact.v3 import GetUserRequest, GetUserResponse
 
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
@@ -74,15 +77,22 @@ class QtLoggingHandler(logging.Handler):
 
 
 class QWsClient(QObject, WsClient):
-    def __init__(self, app_id, app_secret, feishu_client):
-        super().__init__(app_id=app_id, app_secret=app_secret, feishu_client=feishu_client)
+    signal_event_key = Signal(str, str)
+    def __init__(self, app_id, app_secret, parent: "MainWindow"):
+        super().__init__(app_id=app_id, app_secret=app_secret, feishu_client=parent.feishu_client)
+        self.parent = parent
 
     def ws_client_event_handler_init(self):
         self.ws_client_event_handler = (
             EventDispatcherHandler.builder("", "")
-            .register_p2_im_message_receive_v1(self.do_p2_im_message_receive_v1)
+            .register_p2_application_bot_menu_v6(self.do_p2_application_bot_menu_v6)
             .build()
         )
+
+    def do_p2_application_bot_menu_v6(self, data: P2ApplicationBotMenuV6) -> None:
+        event_key = data.event.event_key
+        open_id = data.event.operator.operator_id.open_id
+        self.signal_event_key.emit(event_key, open_id)
 
     def do_p2_im_message_receive_v1(self, data: P2ImMessageReceiveV1):
         pass
@@ -178,6 +188,28 @@ class QRunner(QObject):
             'Frequency': 'frequency',
             'Severity': 'severity'
         }
+
+    def get_email_by_open_id(self, open_id):
+        try:
+            client = self.parent.feishu_client.client
+            request: GetUserRequest = GetUserRequest.builder() \
+                .user_id(open_id) \
+                .user_id_type("open_id") \
+                .build()
+
+            # 发起请求
+            response: GetUserResponse = client.contact.v3.user.get(request)
+
+            # 处理失败返回
+            if not response.success():
+                logger.error(
+                    f"client.contact.v3.user.get failed, code: {response.code}, msg: {response.msg}, log_id: {response.get_log_id()}, resp: \n{json.dumps(json.loads(response.raw.content), indent=4, ensure_ascii=False)}")
+                return
+            else:
+                return response.data.user.email
+        except Exception as e:
+            logger.error(f"client.contact.v3.user.get failed, {e}")
+            return
 
     def code_beamer_defects_conversion_feishu_items(self, defects: list[CodeBeamerDefect]):
         feishu_items = []
@@ -483,22 +515,225 @@ class QRunner(QObject):
             )
 
     def test_job(self):
+        logger.info("test_job")
+
+    def resp_today_submit(self, open_id):
+        logger.info(f"开始执行resp_today_submit...")
         feishu_client = self.parent.feishu_client
-        try:
-            table_index = self.parent.comboBox_BitableDateTable.currentIndex()
-            table_id = self.parent.feishu_bitable_tables[table_index]['table_id']
-            app_token = self.parent.feishu_bitable_app_token
-            feishu_items = feishu_client.bitable_api.get_records(
-                app_token=app_token,
-                table_id=table_id,
-                field_names=['文本'],
-                page_size=2
-            )
-            print(feishu_items)
-        except Exception as e:
-            table_index = self.parent.comboBox_BitableDateTable.currentIndex()
-            logger.error(f"获取多维表格数据表{self.parent.feishu_bitable_tables[table_index]['name']}记录失败，{e}")
+        email = self.get_email_by_open_id(open_id)
+        if not email:
+            logger.error(f"获取email失败")
             return
+        update_time = self.parent.db_manager.update_time_db.get_update_time()
+        try:
+            defects = self.parent.db_manager.defects_db.get_today_defects()
+
+            content = {
+                'zh_cn': {
+                    'title': f'今日新增Defects数量:{len(defects)}',
+                    "content": []
+                }
+            }
+            defect_content = content['zh_cn']['content']
+            defect_content.append([{
+                "tag": "text",
+                "text": f"数据同步时间：{update_time}"
+            }])
+            if defects:
+                for defect in defects:
+                    defect_content.append([{"tag": "hr"}])
+                    defect_content.append([
+                        {
+                            "tag": "a",
+                            "href": f"https://cb.alm.vnet.valeo.com/cb/issue/{defect.defect_id}",
+                            "text": f"{defect.defect_id}  ",
+                            "style": ["bold", "italic"]
+                        },
+                        {
+                            "tag": "text",
+                            "text": f"{defect.summary}"
+                        },
+                    ])
+                    defect_content.append([
+                        {
+                            "tag": "text",
+                            "text": f"提交人：{defect.submitted_by}"
+                        },
+                        {
+                            "tag": "text",
+                            "text": f"指派人：{defect.assigned_to}"
+                        },
+                    ])
+
+            feishu_client.send_message(
+                receive_id_type='email',
+                receive_id=email,
+                msg_type='post',
+                content=content
+            )
+            logger.info(f"发送今日新增defects执行完毕")
+
+        except Exception as e:
+            logger.error(f"resp_today_submit执行失败，{e}")
+
+    def resp_yesterday_submit(self, open_id):
+        logger.info(f"开始执行resp_yesterday_submit...")
+        feishu_client = self.parent.feishu_client
+        email = self.get_email_by_open_id(open_id)
+        if not email:
+            logger.error(f"获取email失败")
+            return
+        update_time = self.parent.db_manager.update_time_db.get_update_time()
+        try:
+            defects = self.parent.db_manager.defects_db.get_yesterday_defects()
+
+            content = {
+                'zh_cn': {
+                    'title': f'昨日新增Defects数量:{len(defects)}',
+                    "content": []
+                }
+            }
+            defect_content = content['zh_cn']['content']
+            defect_content.append([{
+                "tag": "text",
+                "text": f"数据同步时间：{update_time}"
+            }])
+            if defects:
+                for defect in defects:
+                    defect_content.append([{"tag": "hr"}])
+                    defect_content.append([
+                        {
+                            "tag": "a",
+                            "href": f"https://cb.alm.vnet.valeo.com/cb/issue/{defect.defect_id}",
+                            "text": f"{defect.defect_id}  ",
+                            "style": ["bold", "italic"]
+                        },
+                        {
+                            "tag": "text",
+                            "text": f"{defect.summary}"
+                        },
+                    ])
+                    defect_content.append([
+                        {
+                            "tag": "text",
+                            "text": f"提交人：{defect.submitted_by}"
+                        },
+                        {
+                            "tag": "text",
+                            "text": f"指派人：{defect.assigned_to}"
+                        },
+                    ])
+
+            feishu_client.send_message(
+                receive_id_type='email',
+                receive_id=email,
+                msg_type='post',
+                content=content
+            )
+            logger.info(f"发送今日新增defects执行完毕")
+
+        except Exception as e:
+            logger.error(f"resp_today_submit执行失败，{e}")
+
+    def resp_assigned_to_me(self, open_id):
+        feishu_client = self.parent.feishu_client
+        email = self.get_email_by_open_id(open_id)
+        if not email:
+            logger.error(f"获取email失败")
+            return
+        defect_db = self.parent.db_manager.defects_db
+        update_time = self.parent.db_manager.update_time_db.get_update_time()
+        defects = defect_db.get_active_defects_by_assignee(email)
+
+        content = {
+            'zh_cn': {
+                'title': f'指派给你的票数量:{len(defects)}',
+                "content": []
+            }
+        }
+        defect_content = content['zh_cn']['content']
+        defect_content.append([{
+            "tag": "text",
+            "text": f"数据同步时间：{update_time}"
+        }])
+        if defects:
+            for defect in defects:
+                defect_content.append([{"tag": "hr"}])
+                defect_content.append([
+                    {
+                        "tag": "a",
+                        "href": f"https://cb.alm.vnet.valeo.com/cb/issue/{defect.defect_id}",
+                        "text": f"{defect.defect_id}  ",
+                        "style": ["bold", "italic"]
+                    },
+                    {
+                        "tag": "text",
+                        "text": f"{defect.summary}"
+                    },
+                ])
+                defect_content.append([
+                    {
+                        "tag": "text",
+                        "text": f"修复版本：{defect.fixed_in_release}"
+                    }
+                ])
+
+        feishu_client.send_message(
+            receive_id_type='email',
+            receive_id=email,
+            msg_type='post',
+            content=content
+        )
+
+    def resp_submitted_by_me(self, open_id):
+        feishu_client = self.parent.feishu_client
+        email = self.get_email_by_open_id(open_id)
+        if not email:
+            logger.error(f"获取email失败")
+            return
+        defect_db = self.parent.db_manager.defects_db
+        update_time = self.parent.db_manager.update_time_db.get_update_time()
+        defects = defect_db.get_active_defects_by_submitted(email)
+
+        content = {
+            'zh_cn': {
+                'title': f'你提交的票数量:{len(defects)}',
+                "content": []
+            }
+        }
+        defect_content = content['zh_cn']['content']
+        defect_content.append([{
+            "tag": "text",
+            "text": f"数据同步时间：{update_time}"
+        }])
+        if defects:
+            for defect in defects:
+                defect_content.append([{"tag": "hr"}])
+                defect_content.append([
+                    {
+                        "tag": "a",
+                        "href": f"https://cb.alm.vnet.valeo.com/cb/issue/{defect.defect_id}",
+                        "text": f"{defect.defect_id}  ",
+                        "style": ["bold", "italic"]
+                    },
+                    {
+                        "tag": "text",
+                        "text": f"{defect.summary}"
+                    },
+                ])
+                defect_content.append([
+                    {
+                        "tag": "text",
+                        "text": f"修复版本：{defect.fixed_in_release}"
+                    }
+                ])
+
+        feishu_client.send_message(
+            receive_id_type='email',
+            receive_id=email,
+            msg_type='post',
+            content=content
+        )
 
 
 class MainWindow(QMainWindow, Ui_MainWindow):
@@ -506,14 +741,6 @@ class MainWindow(QMainWindow, Ui_MainWindow):
     自定义的主窗口类，继承了 QMainWindow（Qt主窗口行为）
     """
     signal_update_data_tables = Signal(str)
-
-    signal_job_sync_defects = Signal()
-    signal_job_send_assigned_to_test_notify = Signal()
-    signal_job_send_assigned_to_sys_notify = Signal()
-    signal_job_send_assigned_to_sw_notify = Signal()
-    signal_job_send_added_today_notify = Signal()
-    signal_job_send_added_yesterday_notify = Signal()
-    signal_job_test = Signal()
 
     def __init__(self):
         super().__init__()
@@ -535,15 +762,6 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         self.sys_members = []
         self.admin_members = []
 
-        self.job_name_map = {
-            "同步Defects": self.signal_job_sync_defects,
-            '给测试团队发送assigned票通知': self.signal_job_send_assigned_to_test_notify,
-            "给系统团队发送assigned票通知": self.signal_job_send_assigned_to_sys_notify,
-            "给开发团队发送assigned票通知": self.signal_job_send_assigned_to_sw_notify,
-            "今日新增票通知": self.signal_job_send_added_today_notify,
-            "昨日新增票通知": self.signal_job_send_added_yesterday_notify,
-            "test": self.signal_job_test,
-        }
         self.scheduler = QtScheduler()
         self.scheduler.start()
         self.check_ws_client_state_timer = QTimer()
@@ -566,7 +784,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         self.feishu_bitable_tables: list[dict] = []  # [{table_id: table_name}]
         self.feishu_bitable_app_token: str = ''
         self.group_chat_id:  str = ''
-
+        self._runner_init()
         self.feishu_client: Optional[QFeishuApiClient] = None
         self._feishu_client_init()
 
@@ -575,7 +793,21 @@ class MainWindow(QMainWindow, Ui_MainWindow):
 
         self.cb_client: Optional[QCodebeamerDefectClient] = None
         self._codebeamer_init()
-        self._runner_init()
+        self.job_name_map = {
+            "同步Defects": self.runner.sync_code_beamer_defect_to_feishu,
+            '给测试团队发送assigned票通知': self.runner.send_assigned_to_test_notify,
+            "给系统团队发送assigned票通知": self.runner.send_assigned_to_sys_notify,
+            "给开发团队发送assigned票通知": self.runner.send_assigned_to_sw_notify,
+            "今日新增票通知": self.runner.send_added_today_notify,
+            "昨日新增票通知": self.runner.send_added_yesterday_notify,
+            "test": self.runner.test_job,
+        }
+        self.event_key_map = {
+            "指派给我的Bug": self.runner.resp_assigned_to_me,
+            "我提交的Bug": self.runner.resp_submitted_by_me,
+            "昨日新增Bug": self.runner.resp_yesterday_submit,
+            "今天新增Bug": self.runner.resp_today_submit,
+        }
         self.signal_connect()
         self.load_members()
         self.init_ui()
@@ -614,7 +846,21 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         """
         所有定时任务的统一执行逻辑
         """
-        self.job_name_map[job_name].emit()
+        func = self.job_name_map.get(job_name)
+        if func:
+            func()
+        else:
+            logger.error(f"找不到任务: {job_name}")
+
+    def execute_task_logic_ws_client(self, event_key, open_id):
+        """
+        所有定时任务的统一执行逻辑
+        """
+        func = self.event_key_map.get(event_key)
+        if func:
+            func(open_id)
+        else:
+            logger.error(f"找不到任务: {event_key}")
 
     def init_scheduler_jobs(self):
         """
@@ -783,14 +1029,38 @@ class MainWindow(QMainWindow, Ui_MainWindow):
 
     def _feishu_ws_client_init(self):
         self.feishu_ws_client_thread = QThread()
-        self.feishu_ws_client = QWsClient(self.feishu_app_id, self.feishu_secret, self.feishu_client)
+        self.feishu_ws_client = QWsClient(self.feishu_app_id, self.feishu_secret, self)
         self.feishu_ws_client.moveToThread(self.feishu_ws_client_thread)
         self.feishu_ws_client_thread.start()
+        self.feishu_ws_client.signal_event_key.connect(self.ws_client_trigger_job)
 
     def manual_trigger_job(self):
         job_name = self.comboBox_ManualTrigger.currentText()
         if job_name in self.job_name_map:
-            self.job_name_map[job_name].emit()
+            # 添加一个单次执行的任务
+            self.scheduler.add_job(
+                func=self.execute_task_logic,
+                trigger='date',  # 立即执行一次
+                args=[job_name],
+                id=str(uuid.uuid4())[:8],
+                name=f"手动触发-{job_name}",
+                misfire_grace_time=60
+            )
+            logger.debug(f"已提交手动任务: {job_name}")
+
+    def ws_client_trigger_job(self, event_key, open_id):
+        if event_key in self.event_key_map:
+            # 添加一个单次执行的任务
+            self.scheduler.add_job(
+                func=self.execute_task_logic_ws_client,
+                trigger='date',  # 立即执行一次
+                args=[event_key, open_id],
+                id=str(uuid.uuid4())[:8],
+                name=f"回调触发-{event_key}",
+                misfire_grace_time=60
+            )
+            logger.debug(f"已提交回调任务: {event_key}")
+
 
     def signal_connect(self):
         self.lineEdit_Username.editingFinished.connect(self.update_cb_username)
@@ -808,15 +1078,6 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         self.pushButton_ManualTrigger.clicked.connect(self.manual_trigger_job)
         self.pushButton_GetProject.clicked.connect(self.cb_client.get_projects)
         self.cb_client.signal_projects.connect(self.update_cb_project)
-
-        # jobs
-        self.signal_job_sync_defects.connect(self.runner.sync_code_beamer_defect_to_feishu)
-        self.signal_job_send_assigned_to_test_notify.connect(self.runner.send_assigned_to_test_notify)
-        self.signal_job_send_assigned_to_sys_notify.connect(self.runner.send_assigned_to_sys_notify)
-        self.signal_job_send_assigned_to_sw_notify.connect(self.runner.send_assigned_to_sw_notify)
-        self.signal_job_send_added_today_notify.connect(self.runner.send_added_today_notify)
-        self.signal_job_send_added_yesterday_notify.connect(self.runner.send_added_yesterday_notify)
-        self.signal_job_test.connect(self.runner.test_job)
 
     def update_cb_project(self, projects):
         self.cb_projects = projects
@@ -864,8 +1125,6 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         else:
             return
 
-
-
     def update_feishu_bitable_tables(self, tables: list):
         self.feishu_bitable_tables.clear()
         name_list = []
@@ -879,28 +1138,28 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         """重写关闭事件，优雅退出线程"""
         if self.runner_thread:
             self.runner_thread.quit()
-            if self.runner_thread.wait(3000):  # 等待3秒超时
+            if self.runner_thread.wait(1000):  # 等待1秒超时
                 logger.debug("runner_thread线程已正常停止")
             else:
                 logger.warning("runner_thread线程强制退出")
 
         if self.cb_client_thread:
             self.cb_client_thread.quit()
-            if self.cb_client_thread.wait(3000):  # 等待3秒超时
+            if self.cb_client_thread.wait(1000):  # 等待1秒超时
                 logger.debug("cb_client_thread线程已正常停止")
             else:
                 logger.warning("cb_client_thread线程强制退出")
 
         if self.feishu_client_thread:
             self.feishu_client_thread.quit()
-            if self.feishu_client_thread.wait(3000):  # 等待3秒超时
+            if self.feishu_client_thread.wait(1000):  # 等待1秒超时
                 logger.debug("feishu_client_thread线程已正常停止")
             else:
                 logger.warning("feishu_client_thread线程强制退出")
 
         if self.feishu_ws_client_thread:
             self.feishu_ws_client_thread.quit()
-            if self.feishu_ws_client_thread.wait(3000):  # 等待3秒超时
+            if self.feishu_ws_client_thread.wait(1000):  # 等待1秒超时
                 logger.debug("feishu_ws_client_thread线程已正常停止")
             else:
                 logger.warning("feishu_ws_client_thread线程强制退出")

@@ -339,7 +339,7 @@ class DefectsDB(DBBase):
         # 注意：这里的状态字符串建议与你 CodeBeamer 中的实际值保持一致（大小写敏感）
         sql = f"""
             SELECT * FROM {self.safe_table} 
-            WHERE assigned_to LIKE ? 
+            WHERE assigned_to_email LIKE ? 
             AND status NOT IN ('Cancelled', 'Closed')
             ORDER BY modified_at DESC
         """
@@ -354,6 +354,29 @@ class DefectsDB(DBBase):
 
         # 转换为 Pydantic 模型列表
         return [CodeBeamerDefect.model_validate(dict(row)) for row in rows]
+
+    def get_active_defects_by_submitted(self, submitted_email: str) -> list[CodeBeamerDefect]:
+        """
+        获取指定提交人的进行中缺陷 (精确匹配 Email)
+        """
+        sql = f"""
+            SELECT * FROM {self.safe_table} 
+            WHERE submitted_by_email = ? 
+            AND status NOT IN ('Cancelled', 'Closed')
+            ORDER BY modified_at DESC
+        """
+
+        # 3. 直接传入原始变量，不再拼接 %
+        params = (submitted_email,)
+
+        rows = self.execute_dql(sql, params)
+
+        if not rows:
+            return []
+
+        # 4. 转换为 Pydantic 模型列表
+        return [CodeBeamerDefect.model_validate(dict(row)) for row in rows]
+
 
     def _get_model_fields(self) -> list[str]:
         """获取模型的所有字段名，用于动态生成 SQL"""
