@@ -175,6 +175,10 @@ class QRunner(QObject):
     def __init__(self, parent: "MainWindow"):
         super().__init__()
         self.parent = parent
+        self.gc = gspread.oauth(
+            credentials_filename='./google_oauth/client_secret.json',
+            authorized_user_filename='./google_oauth/authorized_user.json'
+        )
         self.code_beamer_defect_field_map = {
             'ID': 'defect_id',
             'Status': 'status',
@@ -447,14 +451,11 @@ class QRunner(QObject):
     def update_google_spec_test_report_arp(self):
         logger.info(f"开始更新google spec apr report")
         defects_db = self.parent.db_manager.defects_db
-        reported_defects = defects_db.get_active_defects_by_reported_in_release("R500RD7")
         config_dict = self.load_google_spec_config()
+        reported_defects = defects_db.get_active_defects_by_reported_in_release(config_dict["sw_version"])
+
         open_defects = defects_db.get_active_open_defects()
-        gc = gspread.oauth(
-            credentials_filename='./google_oauth/client_secret.json',
-            authorized_user_filename='./google_oauth/authorized_user.json'
-        )
-        sh = gc.open_by_url(config_dict["google_spec_url"])
+        sh = self.gc.open_by_url(config_dict["google_spec_url"])
 
         worksheet = sh.worksheet(config_dict['sheet_name'])
         reported_defects_matrix = []
