@@ -2,9 +2,11 @@ import json
 import logging
 import os
 import uuid
+from datetime import datetime
 from typing import Optional
 from pathlib import Path
 
+import gspread
 import requests
 import urllib3
 from PySide6.QtCore import QObject, QThread, Signal, QTimer
@@ -23,6 +25,17 @@ from app.FeishuApi.FeishuApiClient import FeishuApiClient
 from app.FeishuApi.FeishuWsClient import WsClient
 from app.ui.MainWindow import Ui_MainWindow
 from app.user_data import CodeBeamerDefect
+import lark_oapi.core.http.transport as feishu_transport
+
+from lark_oapi.api.im.v1 import P2ImMessageReceiveV1
+from lark_oapi.api.application.v6 import P2ApplicationBotMenuV6
+# from app.FeishuApi.CustomEventDispatcherHandler import EventDispatcherHandler
+from lark_oapi import EventDispatcherHandler
+from lark_oapi.api.contact.v3 import GetUserRequest, GetUserResponse
+
+urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
+
+logger = logging.getLogger('FeishuClient.' + __name__)
 
 feishu_session = requests.Session()
 
@@ -44,18 +57,8 @@ adapter = HTTPAdapter(
 feishu_session.mount('https://', adapter)
 feishu_session.mount('http://', adapter)
 
-# 4. 【核心魔法】偷天换日，接管 requests 的默认 request 方法
-requests.request = feishu_session.request
+feishu_transport.requests = feishu_session
 
-from lark_oapi.api.im.v1 import P2ImMessageReceiveV1
-from lark_oapi.api.application.v6 import P2ApplicationBotMenuV6
-# from app.FeishuApi.CustomEventDispatcherHandler import EventDispatcherHandler
-from lark_oapi import EventDispatcherHandler
-from lark_oapi.api.contact.v3 import GetUserRequest, GetUserResponse
-
-urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
-
-logger = logging.getLogger('FeishuClient.' + __name__)
 
 class QtSignaler(QObject):
     """用于发出信号的辅助类，确保线程安全"""
@@ -413,8 +416,87 @@ class QRunner(QObject):
         except Exception as e:
             logger.error(f"send_added_yesterday_notify执行失败，{e}")
 
+    def sync_code_beamer_defect_to_database(self):
+        logger.info(f"开始执行Defects同步到数据库...")
+        code_beamer_client = self.parent.cb_client
+        if code_beamer_client.client.is_authenticated() or code_beamer_client.client.authenticate():
+            try:
+
+                project_id = self.parent.cb_projects[self.parent.comboBox_CBProject.currentIndex()]['id']
+
+                tracker_id = code_beamer_client.get_tracker_id_by_name('Defect', project_id)
+                items = code_beamer_client.get_all_items_by_query(tracker_id=tracker_id, filter_active=False)
+                defs = code_beamer_client.convert_defect_items(items)
+                result = self.parent.db_manager.defects_db.batch_upsert_defects(defs)
+                logger.info(f"Defect同步失败成功，{result}")
+            except Exception as e:
+                logger.error(f'获取CB Defect失败，{e}')
+
+    def load_google_spec_config(self) -> dict:
+        """读取 config 文件到全局变量"""
+        config_path = "./config/google_spec_config.json"
+        if not os.path.exists(config_path):
+            return {}
+
+        try:
+            with open(config_path, 'r', encoding='utf-8') as f:
+                return json.load(f)
+        except (json.JSONDecodeError, IOError):
+            return {}
+
+    def update_google_spec_test_report_arp(self):
+        logger.info(f"开始更新google spec apr report")
+        defects_db = self.parent.db_manager.defects_db
+        reported_defects = defects_db.get_active_defects_by_reported_in_release("R500RD7")
+        config_dict = self.load_google_spec_config()
+        open_defects = defects_db.get_active_open_defects()
+        gc = gspread.oauth(
+            credentials_filename='./google_oauth/client_secret.json',
+            authorized_user_filename='./google_oauth/authorized_user.json'
+        )
+        sh = gc.open_by_url(config_dict["google_spec_url"])
+
+        worksheet = sh.worksheet(config_dict['sheet_name'])
+        reported_defects_matrix = []
+        open_defects_matrix = []
+        for defect in reported_defects:
+            reported_defects_matrix.append(
+                [f'=HYPERLINK("https://cb.alm.vnet.valeo.com/cb/issue/{defect.defect_id}", {defect.defect_id})',
+                 'Open',
+                 defect.summary,
+                 defect.status,
+                 defect.severity,
+                 self.unix_ms_to_date(defect.submitted_at, -28800000)
+                 ])
+
+        for defect in open_defects:
+            open_defects_matrix.append(
+                [f'=HYPERLINK("https://cb.alm.vnet.valeo.com/cb/issue/{defect.defect_id}", {defect.defect_id})',
+                 'Open',
+                 defect.summary,
+                 defect.status,
+                 defect.severity,
+                 self.unix_ms_to_date(defect.submitted_at, -28800000)
+                 ])
+
+        worksheet.batch_clear(config_dict["del_range"])
+        worksheet.update(range_name=config_dict["new_defects_range_name"], values=open_defects_matrix, value_input_option='USER_ENTERED')
+        worksheet.update(range_name=config_dict["open_defects_range_name"], values=reported_defects_matrix, value_input_option='USER_ENTERED')
+        logger.info(f"更新google spec apr report完成")
+
+    def unix_ms_to_date(self, unix_ms, offset=0):
+        """
+        将 13 位毫秒级 Unix 时间戳转换为日期字符串
+        格式: YYYY-MM-DD HH:MM:SS
+        """
+        # 1. 将毫秒转为秒 (13位 -> 10位)
+        dt_object = datetime.fromtimestamp((unix_ms + offset) / 1000.0)
+
+        # 2. 格式化输出
+        return dt_object.strftime('%Y-%m-%d %H:%M:%S')
+
     def sync_code_beamer_defect_to_feishu(self):
-        logger.info(f"开始执行Defects同步...")
+        logger.info(f"开始执行Defects同步到飞书...")
         code_beamer_client = self.parent.cb_client
         feishu_client = self.parent.feishu_client
         admin_email = self.parent.admin_members[0]
@@ -429,6 +511,14 @@ class QRunner(QObject):
                 items = code_beamer_client.get_all_items_by_query(tracker_id=tracker_id, filter_active=False)
                 defs = code_beamer_client.convert_defect_items(items)
                 result = self.parent.db_manager.defects_db.batch_upsert_defects(defs)
+                if result['inserted'] == 0 and result['updated'] == 0:
+                    feishu_client.message_api.send_message(
+                        receive_id_type='email',
+                        receive_id=admin_email,
+                        msg_type='text',
+                        content={'text': f"Defect同步成功，{result}"}
+                    )
+                    return
             except Exception as e:
                 logger.error(f'获取CB Defect失败，{e}')
                 if not admin_email:
@@ -794,12 +884,14 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         self.cb_client: Optional[QCodebeamerDefectClient] = None
         self._codebeamer_init()
         self.job_name_map = {
-            "同步Defects": self.runner.sync_code_beamer_defect_to_feishu,
+            "同步Defects到飞书": self.runner.sync_code_beamer_defect_to_feishu,
             '给测试团队发送assigned票通知': self.runner.send_assigned_to_test_notify,
             "给系统团队发送assigned票通知": self.runner.send_assigned_to_sys_notify,
             "给开发团队发送assigned票通知": self.runner.send_assigned_to_sw_notify,
             "今日新增票通知": self.runner.send_added_today_notify,
             "昨日新增票通知": self.runner.send_added_yesterday_notify,
+            "更新google spec APR report": self.runner.update_google_spec_test_report_arp,
+            "同步Defects到数据库": self.runner.sync_code_beamer_defect_to_database,
             "test": self.runner.test_job,
         }
         self.event_key_map = {

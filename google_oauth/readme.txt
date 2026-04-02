@@ -1,0 +1,2 @@
+将从Google Developers Console获取的凭据重命名放入当前文件夹
+client_secret.json

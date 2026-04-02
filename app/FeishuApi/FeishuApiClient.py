@@ -1,6 +1,6 @@
 from typing import Optional
 
-from lark_oapi import Client, LogLevel
+from lark_oapi import Client
 
 from app.FeishuApi.FeishuBitableApi import FeishuBitableApi
 from app.FeishuApi.FeishuMessageApi import FeishuMessageApi

@@ -1,0 +1,10 @@
+{
+  "google_spec_url": "https://docs.google.com/spreadsheets/d/1sRUhe1OLUTIZ8mW38Od2BSgnoDhMKhHWOkFDQI_wVdE/edit?gid=356481787#gid=356481787",
+  "sheet_name": "TestReport_APR（副本）",
+  "del_range": [
+    "B3:G",
+    "AL3:AQ"
+  ],
+  "new_defects_range_name": "AL3",
+  "open_defects_range_name": "B3"
+}

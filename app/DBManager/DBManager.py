@@ -355,6 +355,82 @@ class DefectsDB(DBBase):
         # 转换为 Pydantic 模型列表
         return [CodeBeamerDefect.model_validate(dict(row)) for row in rows]
 
+    def get_active_defects_by_fixed_in_release(self, fixed_in_release: str) -> list[CodeBeamerDefect]:
+        """
+        获取指定负责人的进行中缺陷
+        逻辑：fixed_in_release 包含 fixed_in_release
+             且 status 不在 ('Cancel', 'Closed') 中
+        """
+        # 使用 LIKE 实现“包含”
+        # 使用 NOT IN 排除已结束的状态
+        # 注意：这里的状态字符串建议与你 CodeBeamer 中的实际值保持一致（大小写敏感）
+        sql = f"""
+            SELECT * FROM {self.safe_table} 
+            WHERE fixed_in_release LIKE ? 
+            AND status NOT IN ('Cancelled', 'Closed')
+            ORDER BY modified_at DESC
+        """
+
+        # 构造模糊查询参数：%某人%
+        params = (f"%{fixed_in_release}%",)
+
+        rows = self.execute_dql(sql, params)
+
+        if not rows:
+            return []
+
+        # 转换为 Pydantic 模型列表
+        return [CodeBeamerDefect.model_validate(dict(row)) for row in rows]
+
+    def get_active_defects_by_reported_in_release(self, reported_in_release: str) -> list[CodeBeamerDefect]:
+        """
+        获取指定负责人的进行中缺陷
+        逻辑：reported_in_release 包含 reported_in_release
+             且 status 不在 ('Cancel', 'Closed') 中
+        """
+        # 使用 LIKE 实现“包含”
+        # 使用 NOT IN 排除已结束的状态
+        # 注意：这里的状态字符串建议与你 CodeBeamer 中的实际值保持一致（大小写敏感）
+        sql = f"""
+            SELECT * FROM {self.safe_table} 
+            WHERE reported_in_release LIKE ? 
+            AND status NOT IN ('Cancelled', 'Closed')
+            ORDER BY modified_at DESC
+        """
+
+        # 构造模糊查询参数：%某人%
+        params = (f"%{reported_in_release}%",)
+
+        rows = self.execute_dql(sql, params)
+
+        if not rows:
+            return []
+
+        # 转换为 Pydantic 模型列表
+        return [CodeBeamerDefect.model_validate(dict(row)) for row in rows]
+
+    def get_active_open_defects(self) -> list[CodeBeamerDefect]:
+        """
+        获取指未关闭的票
+        逻辑：status 不在 ('Cancel', 'Closed') 中
+        """
+        # 使用 LIKE 实现“包含”
+        # 使用 NOT IN 排除已结束的状态
+        # 注意：这里的状态字符串建议与你 CodeBeamer 中的实际值保持一致（大小写敏感）
+        sql = f"""
+            SELECT * FROM {self.safe_table} 
+            WHERE status NOT IN ('Cancelled', 'Closed')
+            ORDER BY modified_at DESC
+        """
+
+        rows = self.execute_dql(sql)
+
+        if not rows:
+            return []
+
+        # 转换为 Pydantic 模型列表
+        return [CodeBeamerDefect.model_validate(dict(row)) for row in rows]
+
     def get_active_defects_by_submitted(self, submitted_email: str) -> list[CodeBeamerDefect]:
         """
         获取指定提交人的进行中缺陷 (精确匹配 Email)
