@@ -432,6 +432,7 @@ class QRunner(QObject):
                 items = code_beamer_client.get_all_items_by_query(tracker_id=tracker_id, filter_active=False)
                 defs = code_beamer_client.convert_defect_items(items)
                 result = self.parent.db_manager.defects_db.batch_upsert_defects(defs)
+                self.parent.db_manager.update_time_db.set_now()
                 logger.info(f"Defect同步失败成功，{result}")
             except Exception as e:
                 logger.error(f'获取CB Defect失败，{e}')
@@ -512,6 +513,8 @@ class QRunner(QObject):
                 items = code_beamer_client.get_all_items_by_query(tracker_id=tracker_id, filter_active=False)
                 defs = code_beamer_client.convert_defect_items(items)
                 result = self.parent.db_manager.defects_db.batch_upsert_defects(defs)
+                self.parent.db_manager.update_time_db.set_now()
+                logger.info(f"获取defect情况，{result}")
                 if result['inserted'] == 0 and result['updated'] == 0:
                     feishu_client.message_api.send_message(
                         receive_id_type='email',
@@ -594,7 +597,6 @@ class QRunner(QObject):
                 )
                 return
 
-            self.parent.db_manager.update_time_db.set_now()
             logger.info(f"Defects同步已完成")
             if not admin_email:
                 return
