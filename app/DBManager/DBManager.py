@@ -2,6 +2,7 @@ import logging
 import sqlite3
 from datetime import date, timedelta, datetime
 from typing import Optional, Union, List, Any
+from chinese_calendar import is_workday
 
 from app.user_data import CodeBeamerDefect
 
@@ -297,12 +298,39 @@ class DefectsDB(DBBase):
         """
         return self.execute_ddl(create_sql)
 
-    def _get_timestamp_ms(self, days_offset: int = 0) -> int:
+    def _get_timestamp_ms(self, days_offset: int = 0, only_workday: bool = True) -> int:
         """
-        私有辅助方法：获取指定日期 00:00:00 的 13 位毫秒时间戳
-        days_offset: 0 代表今天, -1 代表昨天
+        获取指定日期 00:00:00 的 13 位毫秒时间戳
+        :param days_offset: 偏移天数
+        :param only_workday: 是否只获取法定工作日。若日期超出库支持范围，自动降级为普通日期。
         """
-        target_date = date.today() + timedelta(days=days_offset)
+        target_date = date.today()
+
+        if only_workday:
+            try:
+                # 确定跳跃方向
+                step = 1 if days_offset >= 0 else -1
+                # 需要跳跃的步数（取绝对值）
+                remaining_steps = abs(days_offset)
+
+                # 首先：如果“今天”不是工作日，先强制移动到最近的一个工作日（不计入步数）
+                while not is_workday(target_date):
+                    target_date += timedelta(days=step)
+
+                # 然后：按照剩余步数，一步步跳过工作日
+                while remaining_steps > 0:
+                    target_date += timedelta(days=step)
+                    if is_workday(target_date):
+                        remaining_steps -= 1
+
+            except NotImplementedError:
+                # 库失效后的降级处理：直接按原逻辑偏移
+                target_date = date.today() + timedelta(days=days_offset)
+                logger.warning(f"当前日期超出chinesecalendar的支持范围, 降级处理：忽略节假日")
+        else:
+            # 普通逻辑：直接偏移
+            target_date = date.today() + timedelta(days=days_offset)
+
         dt = datetime.combine(target_date, datetime.min.time())
         return int(dt.timestamp() * 1000 + 28800000)
 
@@ -894,4 +922,3 @@ class DBManager:
         # self.sw_member_db: SwMemberDB = SwMemberDB(self.db_path)
         # self.test_member_db: TestMemberDB = TestMemberDB(self.db_path)
         # self.admin_member_db: AdminMemberDB = AdminMemberDB(self.db_path)
-
