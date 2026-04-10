@@ -341,7 +341,7 @@ class FeishuBitableApi:
                     # 可以选择失败后继续删其他批次，或者直接break中断
                     break
                 else:
-                    logger.info(f"批量删除记录成功（第{i // page_size + 1}批），本次删除 {len(current_batch)} 条")
+                    logger.debug(f"批量删除记录成功（第{i // page_size + 1}批），本次删除 {len(current_batch)} 条")
 
             except Exception as e:
                 logger.exception(f"批量删除接口调用异常（第{i // page_size + 1}批）: {str(e)}")
@@ -361,7 +361,7 @@ class FeishuBitableApi:
     ):
         # 空数据直接返回成功
         if not records:
-            logger.info("新增记录列表为空，跳过执行")
+            logger.debug("新增记录列表为空，跳过执行")
             return True
 
         total = len(records)
@@ -406,7 +406,7 @@ class FeishuBitableApi:
                     )
                     all_success = False
                 else:
-                    logger.info(f"新增记录成功（第{batch_num}批），本次新增 {len(current_batch)} 条")
+                    logger.debug(f"新增记录成功（第{batch_num}批），本次新增 {len(current_batch)} 条")
 
             except Exception as e:
                 logger.exception(f"新增接口调用异常（第{batch_num}批）: {str(e)}")

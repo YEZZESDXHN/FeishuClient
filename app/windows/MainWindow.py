@@ -245,6 +245,7 @@ class QRunner(QObject):
         for test_member in members:
             defects = defect_db.get_active_defects_by_assignee(test_member)
             if defects:
+                logger.debug(f"即将给{test_member}发送assigned推送，数量：{len(defects)}")
                 content = {
                     'zh_cn': {
                         'title': f'{title} 数量:{len(defects)}',
@@ -283,6 +284,8 @@ class QRunner(QObject):
                     msg_type='post',
                     content=content
                 )
+            else:
+                logger.debug(f"无指派给{test_member}的bug，跳过")
 
     def send_assigned_to_test_notify(self):
         logger.info(f"开始执行job,给测试团队发送assigned通知...")
@@ -292,13 +295,13 @@ class QRunner(QObject):
 
     def send_assigned_to_sys_notify(self):
         logger.info(f"开始执行job,给系统团队发送assigned通知...")
-        members = self.parent.test_members
+        members = self.parent.sys_members
         self.send_assigned_notify(members, '以下为Assigned给你的Bug，请注意及时验证并更改状态！')
         logger.info(f"系统团队发送assigned通知执行完毕")
 
     def send_assigned_to_sw_notify(self):
         logger.info(f"开始执行job,给软件团队发送assigned通知...")
-        members = self.parent.test_members
+        members = self.parent.sw_members
         self.send_assigned_notify(members, '以下为Assigned给你的Bug，请注意及时验证并更改状态！')
         logger.info(f"软件团队发送assigned通知执行完毕")
 
@@ -841,7 +844,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
 
         self.qt_logging_handler = QtLoggingHandler(self.textEdit.append)
         self.qt_logging_handler.setLevel(logging.INFO)
-        formatter = logging.Formatter('%(asctime)s [%(levelname)s] %(name)s : %(message)s')
+        formatter = logging.Formatter('%(asctime)s [%(levelname)s]: %(message)s')
         self.qt_logging_handler.setFormatter(formatter)
         feishu_logger = logging.getLogger('FeishuClient')
         lark_logger = logging.getLogger('Lark')
