@@ -175,10 +175,6 @@ class QRunner(QObject):
     def __init__(self, parent: "MainWindow"):
         super().__init__()
         self.parent = parent
-        self.gc = gspread.oauth(
-            credentials_filename='./google_oauth/client_secret.json',
-            authorized_user_filename='./google_oauth/authorized_user.json'
-        )
         self.code_beamer_defect_field_map = {
             'ID': 'defect_id',
             'Status': 'status',
@@ -195,6 +191,17 @@ class QRunner(QObject):
             'Frequency': 'frequency',
             'Severity': 'severity'
         }
+        self._gc = None  # 初始设为 None
+
+    @property
+    def gc(self):
+        """只有在第一次调用 self.gc 时才进行 OAuth 认证"""
+        if self._gc is None:
+            self._gc = gspread.oauth(
+                credentials_filename='./google_oauth/client_secret.json',
+                authorized_user_filename='./google_oauth/authorized_user.json'
+            )
+        return self._gc
 
     def get_email_by_open_id(self, open_id):
         try:
