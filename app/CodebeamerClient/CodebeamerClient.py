@@ -17,12 +17,13 @@ class CodebeamerLoginer:
     - 请求处理/解析
     """
 
-    def __init__(self, username, password, base_url: str = "https://cb.alm.vnet.valeo.com"):
+    def __init__(self, username, password, base_url: str = "https://cb.alm.vnet.valeo.com", timeout=60):
         """
         初始化Codebeamer客户端
         """
         self.base_url = base_url
         self.cb_base = f"{base_url}/cb"
+        self.timeout = 60
         self.api_base = f"{self.cb_base}/api/v3"
         self.session = requests.Session()
         self.session.verify = False
@@ -38,7 +39,7 @@ class CodebeamerLoginer:
             return False
         try:
             # /users/me 是一个轻量级的、需要认证的端点
-            response = self.session.get(f"{self.api_base}/projects", timeout=10)
+            response = self.session.get(f"{self.api_base}/projects", timeout=self.timeout)
             self._authenticated = (response.status_code == 200)
             return self._authenticated
         except requests.RequestException:
@@ -65,7 +66,8 @@ class CodebeamerLoginer:
                 login_url,
                 data=login_data,
                 allow_redirects=False,
-                headers={'Content-Type': 'application/x-www-form-urlencoded'}
+                headers={'Content-Type': 'application/x-www-form-urlencoded'},
+                timeout=self.timeout
             )
 
             if response.status_code == 302:
@@ -76,7 +78,7 @@ class CodebeamerLoginer:
 
                 if redirect_to:
                     full_redirect_url = f"{self.cb_base}{redirect_to}"
-                    self.session.get(full_redirect_url)
+                    self.session.get(full_redirect_url, timeout=self.timeout)
 
                 self._prepare_api_headers()
                 self._authenticated = True
@@ -110,7 +112,7 @@ class CodebeamerLoginer:
         full_url = f"{self.api_base}/{url}" if not url.startswith('http') else url
 
         try:
-            response = self.session.get(full_url, params=params)
+            response = self.session.get(full_url, params=params, timeout=self.timeout)
             response.raise_for_status()
             return response.json()
         except requests.exceptions.RequestException as e:
@@ -133,7 +135,7 @@ class CodebeamerLoginer:
                 full_url,
                 json=data,
                 verify=False,
-                timeout=30
+                timeout=self.timeout
             )
 
             if response.status_code == 200:

@@ -89,6 +89,7 @@ class QWsClient(QObject, WsClient):
         self.ws_client_event_handler = (
             EventDispatcherHandler.builder("", "")
             .register_p2_application_bot_menu_v6(self.do_p2_application_bot_menu_v6)
+            .register_p2_im_message_receive_v1(self.do_p2_im_message_receive_v1)
             .build()
         )
 
@@ -297,19 +298,19 @@ class QRunner(QObject):
     def send_assigned_to_test_notify(self):
         logger.info(f"开始执行job,给测试团队发送assigned通知...")
         members = self.parent.test_members
-        self.send_assigned_notify(members, '以下为Assigned给你的Bug，请注意及时验证并更改状态！')
+        self.send_assigned_notify(members, '以下为Assigned给你的Bug，请及时验证并流转状态！')
         logger.info(f"测试团队发送assigned通知执行完毕")
 
     def send_assigned_to_sys_notify(self):
         logger.info(f"开始执行job,给系统团队发送assigned通知...")
         members = self.parent.sys_members
-        self.send_assigned_notify(members, '以下为Assigned给你的Bug，请注意及时验证并更改状态！')
+        self.send_assigned_notify(members, '以下为Assigned给你的Bug，请及时分析并流转状态！')
         logger.info(f"系统团队发送assigned通知执行完毕")
 
     def send_assigned_to_sw_notify(self):
         logger.info(f"开始执行job,给软件团队发送assigned通知...")
         members = self.parent.sw_members
-        self.send_assigned_notify(members, '以下为Assigned给你的Bug，请注意及时验证并更改状态！')
+        self.send_assigned_notify(members, '以下为Assigned给你的Bug，请及时分析并修复，修复完成将状态改为Implemented后转给测试！')
         logger.info(f"软件团队发送assigned通知执行完毕")
 
     def send_added_today_notify(self):
@@ -511,7 +512,9 @@ class QRunner(QObject):
         logger.info(f"开始执行Defects同步到飞书...")
         code_beamer_client = self.parent.cb_client
         feishu_client = self.parent.feishu_client
-        admin_email = self.parent.admin_members[0]
+        admin_email = None
+        if not self.parent.admin_members:
+            admin_email = self.parent.admin_members[0]
         if not feishu_client.client:
             feishu_client.client_init()
         if code_beamer_client.client.is_authenticated() or code_beamer_client.client.authenticate():
@@ -526,23 +529,23 @@ class QRunner(QObject):
                 self.parent.db_manager.update_time_db.set_now()
                 logger.info(f"获取defect情况，{result}")
                 if result['inserted'] == 0 and result['updated'] == 0:
+                    if admin_email:
+                        feishu_client.message_api.send_message(
+                            receive_id_type='email',
+                            receive_id=admin_email,
+                            msg_type='text',
+                            content={'text': f"Defect同步成功，{result}"}
+                        )
+                    return
+            except Exception as e:
+                logger.error(f'获取CB Defect失败，{e}')
+                if admin_email:
                     feishu_client.message_api.send_message(
                         receive_id_type='email',
                         receive_id=admin_email,
                         msg_type='text',
-                        content={'text': f"Defect同步成功，{result}"}
+                        content={'text': f"Defect同步失败"}
                     )
-                    return
-            except Exception as e:
-                logger.error(f'获取CB Defect失败，{e}')
-                if not admin_email:
-                    return
-                feishu_client.message_api.send_message(
-                    receive_id_type='email',
-                    receive_id=admin_email,
-                    msg_type='text',
-                    content={'text': f"Defect同步失败"}
-                )
                 return
             try:
                 table_index = self.parent.comboBox_BitableDateTable.currentIndex()
@@ -559,14 +562,13 @@ class QRunner(QObject):
             except Exception as e:
                 table_index = self.parent.comboBox_BitableDateTable.currentIndex()
                 logger.error(f"获取多维表格数据表{self.parent.feishu_bitable_tables[table_index]['name']}记录失败，{e}")
-                if not admin_email:
-                    return
-                feishu_client.message_api.send_message(
-                    receive_id_type='email',
-                    receive_id=admin_email,
-                    msg_type='text',
-                    content={'text': f"Defect同步失败"}
-                )
+                if admin_email:
+                    feishu_client.message_api.send_message(
+                        receive_id_type='email',
+                        receive_id=admin_email,
+                        msg_type='text',
+                        content={'text': f"Defect同步失败"}
+                    )
                 return
             try:
                 record_ids = []
@@ -580,14 +582,13 @@ class QRunner(QObject):
                 )
             except Exception as e:
                 logger.error(f"删除多维表格数据失败，{e}")
-                if not admin_email:
-                    return
-                feishu_client.message_api.send_message(
-                    receive_id_type='email',
-                    receive_id=admin_email,
-                    msg_type='text',
-                    content={'text': f"Defect同步失败"}
-                )
+                if admin_email:
+                    feishu_client.message_api.send_message(
+                        receive_id_type='email',
+                        receive_id=admin_email,
+                        msg_type='text',
+                        content={'text': f"Defect同步失败,删除多维表格数据失败"}
+                    )
                 return
             try:
                 records = self.code_beamer_defects_conversion_feishu_items(defs)
@@ -597,25 +598,23 @@ class QRunner(QObject):
                     records=records)
             except Exception as e:
                 logger.error(f"同步多维表格数据失败，{e}")
-                if not admin_email:
-                    return
+                if admin_email:
+                    feishu_client.message_api.send_message(
+                        receive_id_type='email',
+                        receive_id=admin_email,
+                        msg_type='text',
+                        content={'text': f"Defect同步失败"}
+                    )
+                return
+
+            logger.info(f"Defects同步已完成")
+            if admin_email:
                 feishu_client.message_api.send_message(
                     receive_id_type='email',
                     receive_id=admin_email,
                     msg_type='text',
-                    content={'text': f"Defect同步失败"}
+                    content={'text': f"Defect同步成功，{result}"}
                 )
-                return
-
-            logger.info(f"Defects同步已完成")
-            if not admin_email:
-                return
-            feishu_client.message_api.send_message(
-                receive_id_type='email',
-                receive_id=admin_email,
-                msg_type='text',
-                content={'text': f"Defect同步成功，{result}"}
-            )
 
     def test_job(self):
         logger.info("test_job")
