@@ -30,6 +30,10 @@ class QCodebeamerDefectClient(QObject, CodebeamerClient):
                 defect.severity = item['severities'][0]['name']
             except:
                 defect.severity = ''
+            try:
+                defect.planned_release = item['versions'][0]['name']
+            except:
+                defect.planned_release = ''
             defect.fixed_in_release = ''
             defect.reported_in_release = ''
             for field in item['customFields']:

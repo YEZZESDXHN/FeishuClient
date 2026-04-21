@@ -103,6 +103,7 @@ jobs:
             --include-data-files="${{ github.workspace }}/config/google_spec_config.json=config\google_spec_config.json" `
             --include-data-files="${{ github.workspace }}/google_oauth/readme.txt=google_oauth\readme.txt" `
             --include-data-files="$qtPluginsPath\sqldrivers\qsqlite.dll"=sqldrivers\qsqlite.dll `
+            --include-data-files="${{ github.workspace }}/logo.ico=logo.ico" `
             --windows-icon-from-ico=${{ env.ICON_PATH }} `
             ${{ env.ENTRY_SCRIPT }}
 #            --include-plugin-directory="$qtPluginsPath\sqldrivers" `

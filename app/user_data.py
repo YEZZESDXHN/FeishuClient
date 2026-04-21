@@ -36,6 +36,7 @@ class CodeBeamerDefect(BaseModel):
     modified_by_email: Optional[str] = ''
     fixed_in_release: Optional[str] = ''
     reported_in_release: Optional[str] = ''
+    planned_release:  Optional[str] = ''
     team: Optional[str] = ''
     owner: Optional[str] = ''
     owner_email: Optional[str] = ''

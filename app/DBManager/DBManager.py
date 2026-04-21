@@ -18,6 +18,14 @@ TEST_MEMBERS_TABLE_NAME = 'test_members'
 ADMIN_MEMBERS_TABLE_NAME = 'admin_members'
 UPDATE_TIME_TABLE_NAME = 'update_time'
 
+DB_MAPPING = {
+    0: "v1.0.0",
+    1: "v2.0.1",  # 增加了 planned_release 字段
+}
+
+# 定义当前代码要求的最新数据库结构版本
+LATEST_VERSION = 1
+
 
 class DBBase:
     """数据库操作通用基类：封装通用逻辑，所有表操作子类继承"""
@@ -293,10 +301,30 @@ class DefectsDB(DBBase):
                 submitted_by_email TEXT DEFAULT '',
                 submitted_at INTEGER DEFAULT 0,
                 frequency TEXT DEFAULT '',
-                severity TEXT DEFAULT ''
+                severity TEXT DEFAULT '',
+                planned_release TEXT DEFAULT ''
             )
         """
         return self.execute_ddl(create_sql)
+
+    def add_planned_release_column(self):
+        """
+        执行具体的加列操作：向 defects 表添加 planned_release 字段。
+        """
+        # 1. 构造 SQL 语句
+        # 注意：SQLite 一次只能添加一个字段
+        sql = f"ALTER TABLE {self.safe_table} ADD COLUMN planned_release TEXT DEFAULT ''"
+
+        # 2. 执行并处理
+        success = self.execute_ddl(sql)
+
+        if success:
+            logger.info(f"表 {self.table_name} 升级成功：已添加 planned_release 字段")
+        else:
+            # 如果失败，可能是字段已存在。
+            logger.warning(f"表 {self.table_name} 字段添加失败（若已存在则忽略此警告）")
+
+        return success
 
     def _get_timestamp_ms(self, days_offset: int = 0, only_workday: bool = True) -> int:
         """
@@ -913,6 +941,7 @@ class SwMemberDB(DBBase):
 class DBManager:
     def __init__(self, db_path: str):
         self.db_path = db_path
+        self._schema_conn = sqlite3.connect(self.db_path, check_same_thread=False)
         self.defects_db: DefectsDB = DefectsDB(self.db_path)
         self.info_db: InfoDB = InfoDB(self.db_path)
         self.scheduler_db: SchedulerDB = SchedulerDB(self.db_path)
@@ -922,3 +951,42 @@ class DBManager:
         # self.sw_member_db: SwMemberDB = SwMemberDB(self.db_path)
         # self.test_member_db: TestMemberDB = TestMemberDB(self.db_path)
         # self.admin_member_db: AdminMemberDB = AdminMemberDB(self.db_path)
+
+        self.migrate_database()
+
+    def _get_db_version(self) -> int:
+        """使用独立连接获取版本号"""
+        cursor = self._schema_conn.cursor()
+        cursor.execute("PRAGMA user_version")
+        return cursor.fetchone()[0]
+
+    def _set_db_version(self, version: int):
+        """使用独立连接设置版本号"""
+        self._schema_conn.execute(f"PRAGMA user_version = {version}")
+        self._schema_conn.commit()
+
+    def migrate_database(self):
+        """数据库迁移中心"""
+        current_v = self._get_db_version()
+        if current_v == LATEST_VERSION:
+            pass
+        elif current_v == 0:
+            logger.info("检测到旧版数据库，正在升级至 v1 (增加 planned_release)...")
+            try:
+                # 调用子类的具体修改方法
+                self.defects_db.add_planned_release_column()
+
+                # 升级成功后提交版本
+                self._set_db_version(1)
+                current_v = 1
+            except Exception as e:
+                logger.error(f"数据库升级到 v1 失败: {e}")
+                # 此时不更新版本号，下次启动会重试
+
+        logger.debug(f"数据库架构验证完成，当前版本: {current_v}")
+        self.close()
+
+    def close(self):
+        """关闭独立连接"""
+        if self._schema_conn:
+            self._schema_conn.close()

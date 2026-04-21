@@ -191,7 +191,8 @@ class QRunner(QObject):
             'Submitted by': 'submitted_by',
             'submitted_at_unix': 'submitted_at',
             'Frequency': 'frequency',
-            'Severity': 'severity'
+            'Severity': 'severity',
+            'Planned Release': 'planned_release'
         }
         self._gc = None  # 初始设为 None
 
@@ -301,12 +302,30 @@ class QRunner(QObject):
                             "text": f"{defect.summary}"
                         },
                     ])
-                    defect_content.append([
-                        {
+                    ext_info = []
+                    if defect.submitted_by:
+                        ext_info.append({
+                                "tag": "text",
+                                "text": f"提交人：{defect.submitted_by}   "
+                            })
+
+                    if defect.status:
+                        ext_info.append({
                             "tag": "text",
-                            "text": f"修复版本：{defect.fixed_in_release}"
-                        }
-                    ])
+                            "text": f"状态：{defect.status}   "
+                        })
+
+                    if defect.fixed_in_release:
+                        ext_info.append({
+                                "tag": "text",
+                                "text": f"修复版本：{defect.fixed_in_release}   "
+                            })
+                    if defect.severity:
+                        ext_info.append({
+                                "tag": "text",
+                                "text": f"问题等级：{defect.severity}   "
+                            })
+                    defect_content.append(ext_info)
 
                 feishu_client.send_message(
                     receive_id_type='email',
@@ -372,16 +391,28 @@ class QRunner(QObject):
                             "text": f"{defect.summary}"
                         },
                     ])
-                    defect_content.append([
-                        {
+                    ext_info = []
+                    if defect.submitted_by:
+                        ext_info.append({
                             "tag": "text",
-                            "text": f"提交人：{defect.submitted_by}"
-                        },
-                        {
+                            "text": f"提交人：{defect.submitted_by}   "
+                        })
+                    if defect.status:
+                        ext_info.append({
                             "tag": "text",
-                            "text": f"指派人：{defect.assigned_to}"
-                        },
-                    ])
+                            "text": f"状态：{defect.status}   "
+                        })
+                    if defect.assigned_to:
+                        ext_info.append({
+                            "tag": "text",
+                            "text": f"指派人：{defect.assigned_to}   "
+                        })
+                    if defect.severity:
+                        ext_info.append({
+                            "tag": "text",
+                            "text": f"问题等级：{defect.severity}   "
+                        })
+                    defect_content.append(ext_info)
 
             feishu_client.send_message(
                 receive_id_type='chat_id',
@@ -431,16 +462,28 @@ class QRunner(QObject):
                             "text": f"{defect.summary}"
                         },
                     ])
-                    defect_content.append([
-                        {
+                    ext_info = []
+                    if defect.submitted_by:
+                        ext_info.append({
                             "tag": "text",
-                            "text": f"提交人：{defect.submitted_by}"
-                        },
-                        {
+                            "text": f"提交人：{defect.submitted_by}   "
+                        })
+                    if defect.status:
+                        ext_info.append({
                             "tag": "text",
-                            "text": f"指派人：{defect.assigned_to}"
-                        },
-                    ])
+                            "text": f"状态：{defect.status}   "
+                        })
+                    if defect.assigned_to:
+                        ext_info.append({
+                            "tag": "text",
+                            "text": f"指派人：{defect.assigned_to}   "
+                        })
+                    if defect.severity:
+                        ext_info.append({
+                            "tag": "text",
+                            "text": f"问题等级：{defect.severity}   "
+                        })
+                    defect_content.append(ext_info)
 
             feishu_client.send_message(
                 receive_id_type='chat_id',
@@ -466,7 +509,7 @@ class QRunner(QObject):
                 defs = code_beamer_client.convert_defect_items(items)
                 result = self.parent.db_manager.defects_db.batch_upsert_defects(defs)
                 self.parent.db_manager.update_time_db.set_now()
-                logger.info(f"Defect同步失败成功，{result}")
+                logger.info(f"Defect同步成功，{result}")
             except Exception as e:
                 logger.error(f'获取CB Defect失败，{e}')
 
@@ -708,16 +751,28 @@ class QRunner(QObject):
                             "text": f"{defect.summary}"
                         },
                     ])
-                    defect_content.append([
-                        {
+                    ext_info = []
+                    if defect.submitted_by:
+                        ext_info.append({
                             "tag": "text",
-                            "text": f"提交人：{defect.submitted_by}"
-                        },
-                        {
+                            "text": f"提交人：{defect.submitted_by}   "
+                        })
+                    if defect.status:
+                        ext_info.append({
                             "tag": "text",
-                            "text": f"指派人：{defect.assigned_to}"
-                        },
-                    ])
+                            "text": f"状态：{defect.status}   "
+                        })
+                    if defect.assigned_to:
+                        ext_info.append({
+                            "tag": "text",
+                            "text": f"指派人：{defect.assigned_to}   "
+                        })
+                    if defect.severity:
+                        ext_info.append({
+                            "tag": "text",
+                            "text": f"问题等级：{defect.severity}   "
+                        })
+                    defect_content.append(ext_info)
 
             feishu_client.send_message(
                 receive_id_type='email',
@@ -767,16 +822,28 @@ class QRunner(QObject):
                             "text": f"{defect.summary}"
                         },
                     ])
-                    defect_content.append([
-                        {
+                    ext_info = []
+                    if defect.submitted_by:
+                        ext_info.append({
                             "tag": "text",
-                            "text": f"提交人：{defect.submitted_by}"
-                        },
-                        {
+                            "text": f"提交人：{defect.submitted_by}   "
+                        })
+                    if defect.status:
+                        ext_info.append({
                             "tag": "text",
-                            "text": f"指派人：{defect.assigned_to}"
-                        },
-                    ])
+                            "text": f"状态：{defect.status}   "
+                        })
+                    if defect.assigned_to:
+                        ext_info.append({
+                            "tag": "text",
+                            "text": f"指派人：{defect.assigned_to}   "
+                        })
+                    if defect.severity:
+                        ext_info.append({
+                            "tag": "text",
+                            "text": f"问题等级：{defect.severity}   "
+                        })
+                    defect_content.append(ext_info)
 
             feishu_client.send_message(
                 receive_id_type='email',
@@ -825,12 +892,29 @@ class QRunner(QObject):
                         "text": f"{defect.summary}"
                     },
                 ])
-                defect_content.append([
-                    {
+                ext_info = []
+                if defect.submitted_by:
+                    ext_info.append({
+                        "tag": "text",
+                        "text": f"提交人：{defect.submitted_by}   "
+                    })
+                if defect.status:
+                    ext_info.append({
+                        "tag": "text",
+                        "text": f"状态：{defect.status}   "
+                    })
+
+                if defect.fixed_in_release:
+                    ext_info.append({
                         "tag": "text",
                         "text": f"修复版本：{defect.fixed_in_release}"
-                    }
-                ])
+                    })
+                if defect.severity:
+                    ext_info.append({
+                        "tag": "text",
+                        "text": f"问题等级：{defect.severity}   "
+                    })
+                defect_content.append(ext_info)
 
         feishu_client.send_message(
             receive_id_type='email',
@@ -875,12 +959,28 @@ class QRunner(QObject):
                         "text": f"{defect.summary}"
                     },
                 ])
-                defect_content.append([
-                    {
+                ext_info = []
+                if defect.status:
+                    ext_info.append({
                         "tag": "text",
-                        "text": f"修复版本：{defect.fixed_in_release}"
-                    }
-                ])
+                        "text": f"状态：{defect.status}   "
+                    })
+                if defect.assigned_to:
+                    ext_info.append({
+                        "tag": "text",
+                        "text": f"指派人：{defect.assigned_to}   "
+                    })
+                if defect.planned_release:
+                    ext_info.append({
+                        "tag": "text",
+                        "text": f"Planned Release：{defect.planned_release}   "
+                    })
+                if defect.severity:
+                    ext_info.append({
+                        "tag": "text",
+                        "text": f"问题等级：{defect.severity}   "
+                    })
+                defect_content.append(ext_info)
 
         feishu_client.send_message(
             receive_id_type='email',
