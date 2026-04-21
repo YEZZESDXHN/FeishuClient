@@ -5,7 +5,7 @@ import sys
 
 from PySide6.QtWidgets import QApplication
 from app.windows.MainWindow import MainWindow
-
+from version import VERSION
 
 def setup_logging(config_file="./config/logging.conf", logger_name="FeishuClient"):
     """
@@ -75,6 +75,7 @@ if __name__ == "__main__":
     app.setStyle("WindowsVista")
     # app.setStyle("Fusion")
     w = MainWindow()
+    w.setWindowTitle("CodeBeamer-飞书同步工具 " + VERSION)
     # version = 'v0.1.9'
     # w.custom_status_bar.label_Version.setText(version)
     w.show()

@@ -23,7 +23,7 @@ env:
   APP_NAME: Codebeamer2Feishu        # 生成的软件名称 (不要包含 .exe)
   ENTRY_SCRIPT: main.py       # Python 入口脚本文件名
   PYTHON_VER: '3.11'          # Python 版本
-  ICON_PATH: icon.ico         # 图标路径 (如果没有图标，请删除下面 Nuitka 参数中的相关行)
+  ICON_PATH: logo.ico         # 图标路径 (如果没有图标，请删除下面 Nuitka 参数中的相关行)
 # ====================================================
 
 jobs:
@@ -34,6 +34,13 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
+
+      - name: Update Version in Code
+        shell: bash
+        run: |
+          # 假设你的版本号定义在 version.py 中：VERSION = "0.0.0"
+          # 使用 sed 命令将 0.0.0 替换为实际的 Tag 名
+          sed -i "s/2.0.0/${{ inputs.release_tag }}/g" version.py
 
       - name: Set up Python
         uses: actions/setup-python@v5
@@ -96,6 +103,7 @@ jobs:
             --include-data-files="${{ github.workspace }}/config/google_spec_config.json=config\google_spec_config.json" `
             --include-data-files="${{ github.workspace }}/google_oauth/readme.txt=google_oauth\readme.txt" `
             --include-data-files="$qtPluginsPath\sqldrivers\qsqlite.dll"=sqldrivers\qsqlite.dll `
+            --windows-icon-from-ico=${{ env.ICON_PATH }} `
             ${{ env.ENTRY_SCRIPT }}
 #            --include-plugin-directory="$qtPluginsPath\sqldrivers" `
 #            --windows-disable-console `

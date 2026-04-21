@@ -10,7 +10,8 @@ import gspread
 import requests
 import urllib3
 from PySide6.QtCore import QObject, QThread, Signal, QTimer
-from PySide6.QtWidgets import QMainWindow, QVBoxLayout
+from PySide6.QtGui import QIcon
+from PySide6.QtWidgets import QMainWindow, QVBoxLayout, QSystemTrayIcon, QMenu, QMessageBox
 from apscheduler.schedulers.qt import QtScheduler
 from apscheduler.triggers.cron import CronTrigger
 from requests.adapters import HTTPAdapter
@@ -226,21 +227,42 @@ class QRunner(QObject):
             logger.error(f"client.contact.v3.user.get failed, {e}")
             return
 
-    def code_beamer_defects_conversion_feishu_items(self, defects: list[CodeBeamerDefect]):
+    def code_beamer_defects_conversion_feishu_items(self, defects: list[CodeBeamerDefect],
+                                                    feishu_records: Optional[list] = None,
+                                                    is_add: bool = True):
         feishu_items = []
-        for defect in defects:
-            feishu_item = {}
+
+        def transform_defect(defect):
+            item = {}
             for key, value in self.code_beamer_defect_field_map.items():
                 if key == 'ID':
                     _id = getattr(defect, value, '')
-                    feishu_item[key] = {
+                    item[key] = {
                         "text": str(_id),
                         "link": f"https://cb.alm.vnet.valeo.com/cb/issue/{_id}"
                     }
-
                 else:
-                    feishu_item[key] = getattr(defect, value, '')
-            feishu_items.append(feishu_item)
+                    item[key] = getattr(defect, value, '')
+            return item
+        if is_add:
+            for _defect in defects:
+                feishu_items.append(transform_defect(_defect))
+        else:
+            if not feishu_records:
+                logger.error('feishu_records 不能为空')
+                return []
+
+            if len(defects) != len(feishu_records):
+                logger.error('defects 与 feishu_records 长度不一致')
+                return []
+
+                # 使用 zip 同时迭代，并将 record 作为外层字典的键
+            for record, _defect in zip(feishu_records, defects):
+                # 根据你的描述，返回“键是 feishu_records 成员”的字典
+                feishu_items.append({
+                    "record": record,  # 这里的 record 可以是 Feishu 的 record_id 或对象
+                    "data": transform_defect(_defect)
+                })
         return feishu_items
 
     def send_assigned_notify(self, members, title):
@@ -513,7 +535,7 @@ class QRunner(QObject):
         code_beamer_client = self.parent.cb_client
         feishu_client = self.parent.feishu_client
         admin_email = None
-        if not self.parent.admin_members:
+        if self.parent.admin_members:
             admin_email = self.parent.admin_members[0]
         if not feishu_client.client:
             feishu_client.client_init()
@@ -536,6 +558,7 @@ class QRunner(QObject):
                             msg_type='text',
                             content={'text': f"Defect同步成功，{result}"}
                         )
+                    logger.info(f'Defect同步成功(无变化，跳过)')
                     return
             except Exception as e:
                 logger.error(f'获取CB Defect失败，{e}')
@@ -554,11 +577,10 @@ class QRunner(QObject):
                 feishu_items = feishu_client.bitable_api.get_records(
                     app_token=app_token,
                     table_id=table_id,
-                    field_names=['Status']
+                    field_names=['ID']
                 )
                 if not feishu_items:
-                    logger.error(f'获取飞书记录失败')
-                    return
+                    logger.warning(f'未获取到飞书记录')
             except Exception as e:
                 table_index = self.parent.comboBox_BitableDateTable.currentIndex()
                 logger.error(f"获取多维表格数据表{self.parent.feishu_bitable_tables[table_index]['name']}记录失败，{e}")
@@ -570,18 +592,31 @@ class QRunner(QObject):
                         content={'text': f"Defect同步失败"}
                     )
                 return
+            # record_ids = []
+            defect_id_and_record_map = {}
             try:
-                record_ids = []
-                for feishu_item in feishu_items:
-                    record_ids.append(feishu_item.record_id)
 
-                feishu_client.bitable_api.delete_records(
-                    app_token=app_token,
-                    table_id=table_id,
-                    records=record_ids
-                )
+                for feishu_item in feishu_items:
+
+                    try:
+                        defect_id = feishu_item.fields["ID"]['text']
+                        # record_ids.append(feishu_item.record_id)
+                        defect_id_and_record_map[defect_id] = feishu_item.record_id
+                    except Exception as e:
+                        logger.error(f"获取defect_id失败,删除该记录：{feishu_item.record_id}，{feishu_item.fields}，{e}")
+                        feishu_client.bitable_api.delete_records(
+                            app_token=app_token,
+                            table_id=table_id,
+                            records=[feishu_item.record_id]
+                        )
+
+                # feishu_client.bitable_api.delete_records(
+                #     app_token=app_token,
+                #     table_id=table_id,
+                #     records=record_ids
+                # )
             except Exception as e:
-                logger.error(f"删除多维表格数据失败，{e}")
+                logger.error(f"获取多维表格defect数据失败，{e}")
                 if admin_email:
                     feishu_client.message_api.send_message(
                         receive_id_type='email',
@@ -591,11 +626,28 @@ class QRunner(QObject):
                     )
                 return
             try:
-                records = self.code_beamer_defects_conversion_feishu_items(defs)
+                add_defs = []
+                update_defs = []
+                update_feishu_records = []
+                for _def in defs:
+                    if str(_def.defect_id) in defect_id_and_record_map:
+                        update_defs.append(_def)
+                        update_feishu_records.append(defect_id_and_record_map[str(_def.defect_id)])
+                    else:
+                        add_defs.append(_def)
+
+                add_records = self.code_beamer_defects_conversion_feishu_items(add_defs)
+                update_records = self.code_beamer_defects_conversion_feishu_items(update_defs, update_feishu_records, False)
+
                 feishu_client.bitable_api.add_records(
                     app_token=app_token,
                     table_id=table_id,
-                    records=records)
+                    records=add_records)
+                feishu_client.bitable_api.update_records(
+                    app_token=app_token,
+                    table_id=table_id,
+                    records=update_records)
+                logger.info(f'更新飞书表格：{len(update_records)}，新增：{len(add_records)}')
             except Exception as e:
                 logger.error(f"同步多维表格数据失败，{e}")
                 if admin_email:
@@ -848,6 +900,9 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         super().__init__()
         self.setupUi(self)
 
+        self.logo_icon = QIcon("logo.ico")
+        self.setWindowIcon(self.logo_icon)
+
         self.qt_logging_handler = QtLoggingHandler(self.textEdit.append)
         self.qt_logging_handler.setLevel(logging.INFO)
         formatter = logging.Formatter('%(asctime)s [%(levelname)s]: %(message)s')
@@ -915,6 +970,22 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         self.signal_connect()
         self.load_members()
         self.init_ui()
+        self.init_tray()
+
+    def init_tray(self):
+        """初始化系统托盘"""
+        self.tray_icon = QSystemTrayIcon(self)
+        self.tray_icon.setIcon(self.logo_icon)  # 同样使用这个 ico
+        self.tray_icon.setToolTip("CodeBeamer-飞书同步工具")
+        self.tray_icon.show()
+
+        # 托盘图标被激活（比如点击）时的行为
+        self.tray_icon.activated.connect(self.on_tray_activated)
+
+    def on_tray_activated(self, reason):
+        if reason == QSystemTrayIcon.Trigger:  # 单击托盘
+            self.showNormal()
+            self.activateWindow()  # 确保窗口提到最前
 
     def load_members(self):
         """读取 config 文件到全局变量"""
@@ -1238,32 +1309,50 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         self.comboBox_BitableDateTable.clear()
         self.comboBox_BitableDateTable.addItems(name_list)
 
+    from PySide6.QtWidgets import QMessageBox, QSystemTrayIcon
+
     def closeEvent(self, event) -> None:
-        """重写关闭事件，优雅退出线程"""
-        if self.runner_thread:
-            self.runner_thread.quit()
-            if self.runner_thread.wait(1000):  # 等待1秒超时
-                logger.debug("runner_thread线程已正常停止")
-            else:
-                logger.warning("runner_thread线程强制退出")
+        """重写关闭事件，弹出选择对话框"""
 
-        if self.cb_client_thread:
-            self.cb_client_thread.quit()
-            if self.cb_client_thread.wait(1000):  # 等待1秒超时
-                logger.debug("cb_client_thread线程已正常停止")
-            else:
-                logger.warning("cb_client_thread线程强制退出")
+        # 弹出提示框
+        reply = QMessageBox.question(
+            self,
+            '退出确认',
+            "您想彻底退出程序，还是隐藏到后台运行？\n\n[Yes]: 彻底退出\n[No]: 隐藏到后台",
+            QMessageBox.Yes | QMessageBox.No | QMessageBox.Cancel,
+            QMessageBox.No
+        )
 
-        if self.feishu_client_thread:
-            self.feishu_client_thread.quit()
-            if self.feishu_client_thread.wait(1000):  # 等待1秒超时
-                logger.debug("feishu_client_thread线程已正常停止")
-            else:
-                logger.warning("feishu_client_thread线程强制退出")
+        if reply == QMessageBox.Yes:
+            # --- 情况 1: 彻底退出，执行原有的线程清理逻辑 ---
+            logger.info("用户选择彻底退出，正在清理线程...")
 
-        if self.feishu_ws_client_thread:
-            self.feishu_ws_client_thread.quit()
-            if self.feishu_ws_client_thread.wait(1000):  # 等待1秒超时
-                logger.debug("feishu_ws_client_thread线程已正常停止")
-            else:
-                logger.warning("feishu_ws_client_thread线程强制退出")
+            # 停止所有线程
+            threads = [
+                (self.runner_thread, "runner_thread"),
+                (self.cb_client_thread, "cb_client_thread"),
+                (self.feishu_client_thread, "feishu_client_thread"),
+                (self.feishu_ws_client_thread, "feishu_ws_client_thread")
+            ]
+            for thread, name in threads:
+                if thread and thread.isRunning():
+                    thread.quit()
+                    if not thread.wait(1000):
+                        logger.warning(f"{name} 线程强制退出")
+
+            event.accept()  # 接受关闭事件，程序退出
+
+        elif reply == QMessageBox.No:
+            # --- 情况 2: 隐藏到后台 ---
+            event.ignore()  # 忽略关闭请求
+            self.hide()  # 隐藏窗口
+            if hasattr(self, 'tray_icon'):
+                self.tray_icon.showMessage(
+                    "同步工具",
+                    "程序已转入后台运行",
+                    QSystemTrayIcon.Information,
+                    2000
+                )
+        else:
+            # --- 情况 3: 用户点击了取消 (Cancel) ---
+            event.ignore()

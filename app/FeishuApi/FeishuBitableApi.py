@@ -8,7 +8,8 @@ from lark_oapi.api.bitable.v1 import CreateAppRequest, ReqApp, CreateAppResponse
     ListAppTableResponse, SearchAppTableRecordRequest, SearchAppTableRecordRequestBody, SearchAppTableRecordResponse, \
     BatchDeleteAppTableRecordRequest, BatchDeleteAppTableRecordRequestBody, BatchDeleteAppTableRecordResponse, \
     AppTableRecord, BatchCreateAppTableRecordRequest, BatchCreateAppTableRecordRequestBody, \
-    BatchCreateAppTableRecordResponse
+    BatchCreateAppTableRecordResponse, BatchUpdateAppTableRecordRequest, BatchUpdateAppTableRecordRequestBody, \
+    BatchUpdateAppTableRecordResponse
 
 
 class UiType(str, Enum):
@@ -348,6 +349,69 @@ class FeishuBitableApi:
                 success = False
 
         return success
+
+    def update_records(
+            self,
+            app_token: str,
+            table_id: str,
+            records: list[dict],
+            user_id_type: str = "open_id",
+            ignore_consistency_check: bool = True,
+            page_size: int = 100
+    ):
+        # 空数据直接返回成功
+        if not records:
+            logger.debug("更新记录列表为空，跳过执行")
+            return True
+
+        total = len(records)
+        all_success = True
+
+        # 分页循环新增
+        for i in range(0, total, page_size):
+            current_batch = records[i:i + page_size]
+            batch_num = i // page_size + 1
+
+            try:
+                # 构建单批次 records
+                app_table_records = []
+                for record in current_batch:
+                    _app_table_record = AppTableRecord.builder().fields(record['data']).record_id(record['record']).build()
+                    app_table_records.append(_app_table_record)
+
+                # 构建请求
+                request: BatchUpdateAppTableRecordRequest = BatchUpdateAppTableRecordRequest.builder() \
+                    .app_token(app_token) \
+                    .table_id(table_id) \
+                    .user_id_type(user_id_type) \
+                    .ignore_consistency_check(ignore_consistency_check) \
+                    .request_body(BatchUpdateAppTableRecordRequestBody.builder()
+                                  .records(app_table_records)
+                                  .build()) \
+                    .build()
+
+                # 发起请求
+                response: BatchUpdateAppTableRecordResponse = self._feishu_api_client.client.bitable.v1.app_table_record.batch_update(
+                    request)
+
+                if not response.success():
+                    logger.error(
+                        f"更新记录失败（第{batch_num}批），"
+                        f"code: {response.code}, "
+                        f"msg: {response.msg}, "
+                        f"log_id: {response.get_log_id()}, "
+                        f"本次条数: {len(current_batch)}, "
+                        f"resp: \n{json.dumps(json.loads(response.raw.content), indent=4, ensure_ascii=False)}"
+                    )
+                    all_success = False
+                else:
+                    logger.debug(f"更新记录成功（第{batch_num}批），本次更新 {len(current_batch)} 条")
+
+            except Exception as e:
+                logger.exception(f"更新接口调用异常（第{batch_num}批）: {str(e)}")
+                all_success = False
+
+        return all_success
 
     def add_records(
             self,
