@@ -22,10 +22,11 @@ DB_MAPPING = {
     0: "v1.0.0",
     1: "v2.0.1",  # 增加了 planned_release 字段
     2: "v2.0.3",  # 增加 origin 字段
+    3: "v2.0.4",  # 增加 Validation Comments，Analysis Comments, priority
 }
 
 # 定义当前代码要求的最新数据库结构版本
-LATEST_VERSION = 2
+LATEST_VERSION = 3
 
 
 class DBBase:
@@ -304,7 +305,10 @@ class DefectsDB(DBBase):
                 frequency TEXT DEFAULT '',
                 severity TEXT DEFAULT '',
                 planned_release TEXT DEFAULT '',
-                origin TEXT DEFAULT ''
+                origin TEXT DEFAULT '',
+                validation_comments TEXT DEFAULT '',
+                analysis_comments TEXT DEFAULT '',
+                priority TEXT DEFAULT ''
             )
         """
         return self.execute_ddl(create_sql)
@@ -330,7 +334,7 @@ class DefectsDB(DBBase):
 
     def add_origin_column(self):
         """
-        执行具体的加列操作：向 defects 表添加 planned_release 字段。
+        执行具体的加列操作：向 defects 表添加 origin 字段。
         """
         # 1. 构造 SQL 语句
         # 注意：SQLite 一次只能添加一个字段
@@ -341,6 +345,63 @@ class DefectsDB(DBBase):
 
         if success:
             logger.info(f"表 {self.table_name} 升级成功：已添加 origin 字段")
+        else:
+            # 如果失败，可能是字段已存在。
+            logger.warning(f"表 {self.table_name} 字段添加失败（若已存在则忽略此警告）")
+
+        return success
+
+    def add_validation_comments_column(self):
+        """
+        执行具体的加列操作：向 defects 表添加 validation_comments 字段。
+        """
+        # 1. 构造 SQL 语句
+        # 注意：SQLite 一次只能添加一个字段
+        sql = f"ALTER TABLE {self.safe_table} ADD COLUMN validation_comments TEXT DEFAULT ''"
+
+        # 2. 执行并处理
+        success = self.execute_ddl(sql)
+
+        if success:
+            logger.info(f"表 {self.table_name} 升级成功：已添加 validation_comments 字段")
+        else:
+            # 如果失败，可能是字段已存在。
+            logger.warning(f"表 {self.table_name} 字段添加失败（若已存在则忽略此警告）")
+
+        return success
+
+    def add_analysis_comments_column(self):
+        """
+        执行具体的加列操作：向 defects 表添加 analysis_comments 字段。
+        """
+        # 1. 构造 SQL 语句
+        # 注意：SQLite 一次只能添加一个字段
+        sql = f"ALTER TABLE {self.safe_table} ADD COLUMN analysis_comments TEXT DEFAULT ''"
+
+        # 2. 执行并处理
+        success = self.execute_ddl(sql)
+
+        if success:
+            logger.info(f"表 {self.table_name} 升级成功：已添加 analysis_comments 字段")
+        else:
+            # 如果失败，可能是字段已存在。
+            logger.warning(f"表 {self.table_name} 字段添加失败（若已存在则忽略此警告）")
+
+        return success
+
+    def add_priority_column(self):
+        """
+        执行具体的加列操作：向 defects 表添加 priority 字段。
+        """
+        # 1. 构造 SQL 语句
+        # 注意：SQLite 一次只能添加一个字段
+        sql = f"ALTER TABLE {self.safe_table} ADD COLUMN priority TEXT DEFAULT ''"
+
+        # 2. 执行并处理
+        success = self.execute_ddl(sql)
+
+        if success:
+            logger.info(f"表 {self.table_name} 升级成功：已添加 priority 字段")
         else:
             # 如果失败，可能是字段已存在。
             logger.warning(f"表 {self.table_name} 字段添加失败（若已存在则忽略此警告）")
@@ -1004,7 +1065,7 @@ class DBManager:
                 logger.error(f"数据库升级到 v1 失败: {e}")
                 # 此时不更新版本号，下次启动会重试
         if current_v == 1:
-            logger.info("检测到旧版数据库，正在升级至 v2 (增加 planned_release)...")
+            logger.info("检测到旧版数据库，正在升级至 v2 (增加 origin)...")
             try:
                 # 调用子类的具体修改方法
                 self.defects_db.add_origin_column()
@@ -1012,6 +1073,21 @@ class DBManager:
                 # 升级成功后提交版本
                 self._set_db_version(2)
                 current_v = 2
+            except Exception as e:
+                logger.error(f"数据库升级到 v2 失败: {e}")
+                # 此时不更新版本号，下次启动会重试
+
+        if current_v == 2:
+            logger.info("检测到旧版数据库，正在升级至 v3 (增加 validation_comments, analysis_comments)...")
+            try:
+                # 调用子类的具体修改方法
+                self.defects_db.add_validation_comments_column()
+                self.defects_db.add_analysis_comments_column()
+                self.defects_db.add_priority_column()
+
+                # 升级成功后提交版本
+                self._set_db_version(3)
+                current_v = 3
             except Exception as e:
                 logger.error(f"数据库升级到 v2 失败: {e}")
                 # 此时不更新版本号，下次启动会重试

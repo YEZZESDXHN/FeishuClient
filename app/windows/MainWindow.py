@@ -193,7 +193,10 @@ class QRunner(QObject):
             'Frequency': 'frequency',
             'Severity': 'severity',
             'Planned Release': 'planned_release',
-            'Origin': 'origin'
+            'Origin': 'origin',
+            'Analysis Comments': 'analysis_comments',
+            'Validation Comments': 'validation_comments',
+            'Priority': 'priority',
         }
         self._gc = None  # 初始设为 None
 
@@ -628,17 +631,17 @@ class QRunner(QObject):
                 self.parent.db_manager.update_time_db.set_now()
                 self.parent.status_bar_show_message(f"数据同步时间：{self.parent.db_manager.update_time_db.get_update_time()}")
                 logger.info(f"获取defect情况，{result}")
-                if result['inserted'] == 0 and result['updated'] == 0:
-                    self.update_sync_time_to_feishu()
-                    if admin_email:
-                        feishu_client.message_api.send_message(
-                            receive_id_type='email',
-                            receive_id=admin_email,
-                            msg_type='text',
-                            content={'text': f"Defect同步成功，{result}"}
-                        )
-                    logger.info(f'Defect同步成功(无变化，跳过)')
-                    return
+                # if result['inserted'] == 0 and result['updated'] == 0:
+                #     self.update_sync_time_to_feishu()
+                #     if admin_email:
+                #         feishu_client.message_api.send_message(
+                #             receive_id_type='email',
+                #             receive_id=admin_email,
+                #             msg_type='text',
+                #             content={'text': f"Defect同步成功，{result}"}
+                #         )
+                #     logger.info(f'Defect同步成功(无变化，跳过)')
+                #     return
             except Exception as e:
                 logger.error(f'获取CB Defect失败，{e}')
                 if admin_email:

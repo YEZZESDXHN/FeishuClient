@@ -46,6 +46,9 @@ class CodeBeamerDefect(BaseModel):
     frequency: Optional[str] = ''
     severity: Optional[str] = ''
     origin: Optional[str] = ''
+    validation_comments: Optional[str] = ''
+    analysis_comments: Optional[str] = ''
+    priority:  Optional[str] = ''
 
     def to_json(self) -> str:
         return self.model_dump_json(by_alias=True, exclude_none=True)
@@ -56,7 +59,8 @@ class CodeBeamerDefect(BaseModel):
     @field_validator('status', 'summary', 'assigned_to', 'modified_by',
                      'fixed_in_release', 'reported_in_release', 'team',
                      'owner', 'submitted_by', 'frequency', 'severity',
-                     'origin', mode='before')
+                     'origin', 'validation_comments', 'analysis_comments',
+                     'priority', mode='before')
     @classmethod  # <--- 必须加上这个，且放在 field_validator 下面
     def set_null_to_empty(cls, v):
         # 这里的 v 是原始输入值

@@ -45,11 +45,19 @@ class QCodebeamerDefectClient(QObject, CodebeamerClient):
                     defect.frequency = field['values'][0]['name']
                 if field['name'] == 'Fixed in Release':
                     defect.fixed_in_release = field['values'][0]['name']
+                if field['name'] == 'Analysis Comments':
+                    defect.analysis_comments = field['value']
+                if field['name'] == 'Validation Comments':
+                    defect.validation_comments = field['value']
 
             try:
                 defect.team = item['teams'][0]['name']
             except Exception as e:
                 defect.team = ''
+            try:
+                defect.priority = item['priority']['name']
+            except Exception as e:
+                defect.priority = ''
             defect.owner_email = ",".join(self.get_email(_item['name'])[1] for _item in item['owners'] if self.get_email(_item['name']))
             defect.owner = ",".join(self.get_email(_item['name'])[0] for _item in item['owners'] if self.get_email(_item['name']))
             defect.submitted_by_email = self.get_email(item['createdBy']['name'])[1]
