@@ -509,6 +509,8 @@ class QRunner(QObject):
                 defs = code_beamer_client.convert_defect_items(items)
                 result = self.parent.db_manager.defects_db.batch_upsert_defects(defs)
                 self.parent.db_manager.update_time_db.set_now()
+                self.parent.status_bar_show_message(
+                    f"数据同步时间：{self.parent.db_manager.update_time_db.get_update_time()}")
                 logger.info(f"Defect同步成功，{result}")
             except Exception as e:
                 logger.error(f'获取CB Defect失败，{e}')
@@ -524,6 +526,37 @@ class QRunner(QObject):
                 return json.load(f)
         except (json.JSONDecodeError, IOError):
             return {}
+
+    def update_sync_time_to_feishu(self):
+        logger.info(f"开始更新同步时间到飞书")
+        feishu_client = self.parent.feishu_client
+        if not feishu_client.client:
+            feishu_client.client_init()
+        try:
+            table_index = self.parent.comboBox_BitableDateTableInfo.currentIndex()
+            table_id = self.parent.feishu_bitable_tables[table_index]['table_id']
+            app_token = self.parent.feishu_bitable_app_token
+            feishu_items = feishu_client.bitable_api.get_records(
+                app_token=app_token,
+                table_id=table_id,
+                field_names=['同步时间']
+            )
+            if not feishu_items:
+                logger.warning(f'未获取到飞书记录')
+                return
+            update_records = []
+            update_record = {}
+            update_record['record'] = feishu_items[0].record_id
+            update_record['data'] = {"同步时间": self.parent.db_manager.update_time_db.get_update_time()}
+            update_records.append(update_record)
+            feishu_client.bitable_api.update_records(
+                app_token=app_token,
+                table_id=table_id,
+                records=update_records)
+        except Exception as e:
+            logger.error(f"更新多维表格同步时间失败，{e}")
+
+
 
     def update_google_spec_test_report_arp(self):
         logger.info(f"开始更新google spec apr report")
@@ -592,8 +625,10 @@ class QRunner(QObject):
                 defs = code_beamer_client.convert_defect_items(items)
                 result = self.parent.db_manager.defects_db.batch_upsert_defects(defs)
                 self.parent.db_manager.update_time_db.set_now()
+                self.parent.status_bar_show_message(f"数据同步时间：{self.parent.db_manager.update_time_db.get_update_time()}")
                 logger.info(f"获取defect情况，{result}")
                 if result['inserted'] == 0 and result['updated'] == 0:
+                    self.update_sync_time_to_feishu()
                     if admin_email:
                         feishu_client.message_api.send_message(
                             receive_id_type='email',
@@ -703,6 +738,7 @@ class QRunner(QObject):
                 return
 
             logger.info(f"Defects同步已完成")
+            self.update_sync_time_to_feishu()
             if admin_email:
                 feishu_client.message_api.send_message(
                     receive_id_type='email',
@@ -1071,6 +1107,10 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         self.load_members()
         self.init_ui()
         self.init_tray()
+        self.status_bar_show_message(f"数据同步时间：{self.db_manager.update_time_db.get_update_time()}")
+
+    def status_bar_show_message(self, msg):
+        self.statusBar1.showMessage(msg, 0)
 
     def init_tray(self):
         """初始化系统托盘"""
@@ -1229,6 +1269,8 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         config = self.db_manager.info_db.get_config()
         self.pushButton_RefreshDataTable.setDisabled(True)
         self.comboBox_BitableDateTable.setDisabled(True)
+        self.comboBox_BitableDateTableReleaseNote.setDisabled(True)
+        self.comboBox_BitableDateTableInfo.setDisabled(True)
         self.comboBox_ManualTrigger.addItems(self.job_name_map.keys())
         if config:
             try:
@@ -1280,6 +1322,8 @@ class MainWindow(QMainWindow, Ui_MainWindow):
             self.feishu_client_state = True
             self.pushButton_RefreshDataTable.setDisabled(False)
             self.comboBox_BitableDateTable.setDisabled(False)
+            self.comboBox_BitableDateTableReleaseNote.setDisabled(False)
+            self.comboBox_BitableDateTableInfo.setDisabled(False)
             self.pushButton_ManualTrigger.setDisabled(False)
             self.pushButton_FeishuClient.setIcon(IconEngine.get_icon('link', 'green'))
             # self.pushButton_RefreshDataTable.clicked.emit()
@@ -1408,6 +1452,12 @@ class MainWindow(QMainWindow, Ui_MainWindow):
             name_list.append(table.name)
         self.comboBox_BitableDateTable.clear()
         self.comboBox_BitableDateTable.addItems(name_list)
+
+        self.comboBox_BitableDateTableReleaseNote.clear()
+        self.comboBox_BitableDateTableReleaseNote.addItems(name_list)
+
+        self.comboBox_BitableDateTableInfo.clear()
+        self.comboBox_BitableDateTableInfo.addItems(name_list)
 
     from PySide6.QtWidgets import QMessageBox, QSystemTrayIcon
 

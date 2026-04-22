@@ -6,8 +6,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>767</width>
-    <height>592</height>
+    <width>813</width>
+    <height>655</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -28,7 +28,7 @@
         <attribute name="title">
          <string>配置</string>
         </attribute>
-        <layout class="QVBoxLayout" name="verticalLayout_3">
+        <layout class="QVBoxLayout" name="verticalLayout_4">
          <item>
           <layout class="QHBoxLayout" name="horizontalLayout_12">
            <item>
@@ -386,58 +386,140 @@
          <item>
           <layout class="QHBoxLayout" name="horizontalLayout_8">
            <item>
-            <widget class="QLabel" name="label_6">
-             <property name="sizePolicy">
-              <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
-               <horstretch>0</horstretch>
-               <verstretch>0</verstretch>
-              </sizepolicy>
-             </property>
-             <property name="minimumSize">
-              <size>
-               <width>75</width>
-               <height>20</height>
-              </size>
-             </property>
-             <property name="text">
+            <widget class="QGroupBox" name="groupBox_3">
+             <property name="title">
               <string>数据表</string>
              </property>
+             <layout class="QGridLayout" name="gridLayout_2">
+              <item row="2" column="2">
+               <widget class="QComboBox" name="comboBox_BitableDateTableInfo">
+                <property name="sizePolicy">
+                 <sizepolicy hsizetype="Expanding" vsizetype="Fixed">
+                  <horstretch>0</horstretch>
+                  <verstretch>0</verstretch>
+                 </sizepolicy>
+                </property>
+                <property name="styleSheet">
+                 <string notr="true"/>
+                </property>
+                <property name="editable">
+                 <bool>false</bool>
+                </property>
+               </widget>
+              </item>
+              <item row="2" column="0" colspan="2">
+               <widget class="QLabel" name="label_11">
+                <property name="sizePolicy">
+                 <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
+                  <horstretch>0</horstretch>
+                  <verstretch>0</verstretch>
+                 </sizepolicy>
+                </property>
+                <property name="minimumSize">
+                 <size>
+                  <width>90</width>
+                  <height>20</height>
+                 </size>
+                </property>
+                <property name="text">
+                 <string>同步信息:</string>
+                </property>
+               </widget>
+              </item>
+              <item row="0" column="0" colspan="2">
+               <widget class="QLabel" name="label_6">
+                <property name="sizePolicy">
+                 <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
+                  <horstretch>0</horstretch>
+                  <verstretch>0</verstretch>
+                 </sizepolicy>
+                </property>
+                <property name="minimumSize">
+                 <size>
+                  <width>90</width>
+                  <height>20</height>
+                 </size>
+                </property>
+                <property name="text">
+                 <string>Defect:</string>
+                </property>
+               </widget>
+              </item>
+              <item row="1" column="2">
+               <widget class="QComboBox" name="comboBox_BitableDateTableReleaseNote">
+                <property name="sizePolicy">
+                 <sizepolicy hsizetype="Expanding" vsizetype="Fixed">
+                  <horstretch>0</horstretch>
+                  <verstretch>0</verstretch>
+                 </sizepolicy>
+                </property>
+                <property name="styleSheet">
+                 <string notr="true"/>
+                </property>
+                <property name="editable">
+                 <bool>false</bool>
+                </property>
+               </widget>
+              </item>
+              <item row="1" column="0">
+               <widget class="QLabel" name="label_10">
+                <property name="sizePolicy">
+                 <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
+                  <horstretch>0</horstretch>
+                  <verstretch>0</verstretch>
+                 </sizepolicy>
+                </property>
+                <property name="minimumSize">
+                 <size>
+                  <width>90</width>
+                  <height>20</height>
+                 </size>
+                </property>
+                <property name="text">
+                 <string>Release Note:</string>
+                </property>
+               </widget>
+              </item>
+              <item row="0" column="2">
+               <widget class="QComboBox" name="comboBox_BitableDateTable">
+                <property name="sizePolicy">
+                 <sizepolicy hsizetype="Expanding" vsizetype="Fixed">
+                  <horstretch>0</horstretch>
+                  <verstretch>0</verstretch>
+                 </sizepolicy>
+                </property>
+                <property name="styleSheet">
+                 <string notr="true"/>
+                </property>
+                <property name="editable">
+                 <bool>false</bool>
+                </property>
+               </widget>
+              </item>
+              <item row="0" column="3">
+               <widget class="QPushButton" name="pushButton_RefreshDataTable">
+                <property name="sizePolicy">
+                 <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
+                  <horstretch>0</horstretch>
+                  <verstretch>0</verstretch>
+                 </sizepolicy>
+                </property>
+                <property name="maximumSize">
+                 <size>
+                  <width>50</width>
+                  <height>16777215</height>
+                 </size>
+                </property>
+                <property name="text">
+                 <string>刷新</string>
+                </property>
+               </widget>
+              </item>
+             </layout>
             </widget>
            </item>
            <item>
-            <widget class="QComboBox" name="comboBox_BitableDateTable">
-             <property name="sizePolicy">
-              <sizepolicy hsizetype="Expanding" vsizetype="Fixed">
-               <horstretch>0</horstretch>
-               <verstretch>0</verstretch>
-              </sizepolicy>
-             </property>
-             <property name="styleSheet">
-              <string notr="true"/>
-             </property>
-             <property name="editable">
-              <bool>false</bool>
-             </property>
-            </widget>
-           </item>
-           <item>
-            <widget class="QPushButton" name="pushButton_RefreshDataTable">
-             <property name="sizePolicy">
-              <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
-               <horstretch>0</horstretch>
-               <verstretch>0</verstretch>
-              </sizepolicy>
-             </property>
-             <property name="maximumSize">
-              <size>
-               <width>50</width>
-               <height>16777215</height>
-              </size>
-             </property>
-             <property name="text">
-              <string>刷新</string>
-             </property>
-            </widget>
+            <layout class="QVBoxLayout" name="verticalLayout_3"/>
            </item>
           </layout>
          </item>
@@ -482,14 +564,14 @@
           </layout>
          </item>
          <item>
-          <spacer name="verticalSpacer">
+          <spacer name="verticalSpacer_2">
            <property name="orientation">
             <enum>Qt::Orientation::Vertical</enum>
            </property>
            <property name="sizeHint" stdset="0">
             <size>
              <width>20</width>
-             <height>0</height>
+             <height>2</height>
             </size>
            </property>
           </spacer>
@@ -513,11 +595,12 @@
     <rect>
      <x>0</x>
      <y>0</y>
-     <width>767</width>
+     <width>813</width>
      <height>33</height>
     </rect>
    </property>
   </widget>
+  <widget class="QStatusBar" name="statusBar1"/>
  </widget>
  <resources/>
  <connections/>
