@@ -37,6 +37,8 @@ class QCodebeamerDefectClient(QObject, CodebeamerClient):
             defect.fixed_in_release = ''
             defect.reported_in_release = ''
             for field in item['customFields']:
+                if field['name'] == 'Origin':
+                    defect.origin = field['values'][0]['name']
                 if field['name'] == 'Reported in Release':
                     defect.reported_in_release = field['values'][0]['name']
                 if field['name'] == 'Frequency':

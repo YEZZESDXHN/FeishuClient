@@ -192,7 +192,8 @@ class QRunner(QObject):
             'submitted_at_unix': 'submitted_at',
             'Frequency': 'frequency',
             'Severity': 'severity',
-            'Planned Release': 'planned_release'
+            'Planned Release': 'planned_release',
+            'Origin': 'origin'
         }
         self._gc = None  # 初始设为 None
 

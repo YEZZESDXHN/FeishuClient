@@ -21,10 +21,11 @@ UPDATE_TIME_TABLE_NAME = 'update_time'
 DB_MAPPING = {
     0: "v1.0.0",
     1: "v2.0.1",  # 增加了 planned_release 字段
+    2: "v2.0.3",  # 增加 origin 字段
 }
 
 # 定义当前代码要求的最新数据库结构版本
-LATEST_VERSION = 1
+LATEST_VERSION = 2
 
 
 class DBBase:
@@ -302,7 +303,8 @@ class DefectsDB(DBBase):
                 submitted_at INTEGER DEFAULT 0,
                 frequency TEXT DEFAULT '',
                 severity TEXT DEFAULT '',
-                planned_release TEXT DEFAULT ''
+                planned_release TEXT DEFAULT '',
+                origin TEXT DEFAULT ''
             )
         """
         return self.execute_ddl(create_sql)
@@ -320,6 +322,25 @@ class DefectsDB(DBBase):
 
         if success:
             logger.info(f"表 {self.table_name} 升级成功：已添加 planned_release 字段")
+        else:
+            # 如果失败，可能是字段已存在。
+            logger.warning(f"表 {self.table_name} 字段添加失败（若已存在则忽略此警告）")
+
+        return success
+
+    def add_origin_column(self):
+        """
+        执行具体的加列操作：向 defects 表添加 planned_release 字段。
+        """
+        # 1. 构造 SQL 语句
+        # 注意：SQLite 一次只能添加一个字段
+        sql = f"ALTER TABLE {self.safe_table} ADD COLUMN origin TEXT DEFAULT ''"
+
+        # 2. 执行并处理
+        success = self.execute_ddl(sql)
+
+        if success:
+            logger.info(f"表 {self.table_name} 升级成功：已添加 origin 字段")
         else:
             # 如果失败，可能是字段已存在。
             logger.warning(f"表 {self.table_name} 字段添加失败（若已存在则忽略此警告）")
@@ -970,7 +991,7 @@ class DBManager:
         current_v = self._get_db_version()
         if current_v == LATEST_VERSION:
             pass
-        elif current_v == 0:
+        if current_v == 0:
             logger.info("检测到旧版数据库，正在升级至 v1 (增加 planned_release)...")
             try:
                 # 调用子类的具体修改方法
@@ -981,6 +1002,18 @@ class DBManager:
                 current_v = 1
             except Exception as e:
                 logger.error(f"数据库升级到 v1 失败: {e}")
+                # 此时不更新版本号，下次启动会重试
+        if current_v == 1:
+            logger.info("检测到旧版数据库，正在升级至 v2 (增加 planned_release)...")
+            try:
+                # 调用子类的具体修改方法
+                self.defects_db.add_origin_column()
+
+                # 升级成功后提交版本
+                self._set_db_version(2)
+                current_v = 2
+            except Exception as e:
+                logger.error(f"数据库升级到 v2 失败: {e}")
                 # 此时不更新版本号，下次启动会重试
 
         logger.debug(f"数据库架构验证完成，当前版本: {current_v}")
