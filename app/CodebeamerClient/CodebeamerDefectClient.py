@@ -35,8 +35,13 @@ class QCodebeamerDefectClient(QObject, CodebeamerClient):
         # 将 3 个以上的连续换行压缩为 2 个换行（保留正常的段落间距）
         cleaned = re.sub(r'\n{3,}', '\n\n', cleaned)
 
-        # 去除首尾空白
-        return cleaned.strip()
+        # 6。替换特殊的波浪号横杠 ~- 为普通的 - (新增规则)
+        cleaned = cleaned.replace('~-', '-')
+
+        lines = [line.strip() for line in cleaned.splitlines() if line.strip()]
+
+        # 最后把保留下来的有效行，用单个换行符重新拼接
+        return '\n'.join(lines)
 
     def convert_defect_items(self, items) -> list[CodeBeamerDefect]:
         defect_list = []
