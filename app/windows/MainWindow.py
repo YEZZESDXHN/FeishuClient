@@ -1241,7 +1241,9 @@ class MainWindow(QMainWindow, Ui_MainWindow):
                 seconds=int(job_param),
                 id=job_id,
                 name=job_name,
-                args=[job_name]  # 传递 ID 和名称给执行函数
+                args=[job_name],  # 传递 ID 和名称给执行函数
+                misfire_grace_time=20,
+                coalesce=True
             )
 
         elif job_type == 'cron':
@@ -1252,7 +1254,9 @@ class MainWindow(QMainWindow, Ui_MainWindow):
                 trigger=CronTrigger.from_crontab(job_param),
                 id=job_id,
                 name=job_name,
-                args=[job_name]
+                args=[job_name],
+                misfire_grace_time=20,
+                coalesce=True
             )
 
         elif job_type == 'date':
@@ -1262,7 +1266,9 @@ class MainWindow(QMainWindow, Ui_MainWindow):
                 run_date=job_param,  # 需符合 ISO 8601 格式
                 id=job_id,
                 name=job_name,
-                args=[job_name]
+                args=[job_name],
+                misfire_grace_time=20,
+                coalesce=True
             )
 
     def init_ui(self):
@@ -1313,10 +1319,19 @@ class MainWindow(QMainWindow, Ui_MainWindow):
                 logger.exception(f"创建数据库文件夹失败：{str(e)}")
         self.db_manager = DBManager(db)
 
+
     def check_feishu_ws_client_state(self):
+        def dummy_job():
+            pass
         if self.feishu_ws_client.ws_client and self.feishu_ws_client.ws_client._conn:
             self.feishu_ws_client_state = True
             self.pushButton_FeishuWsClient.setIcon(IconEngine.get_icon('link', 'green'))
+            self.scheduler.add_job(
+                func=dummy_job,
+                trigger='date',  # 立即执行一次
+                id=str(uuid.uuid4())[:8],
+                name=f"空任务"
+            )
         else:
             self.feishu_ws_client_state = False
             self.pushButton_FeishuWsClient.setIcon(IconEngine.get_icon('unlink', 'red'))
@@ -1367,7 +1382,8 @@ class MainWindow(QMainWindow, Ui_MainWindow):
                 args=[job_name],
                 id=str(uuid.uuid4())[:8],
                 name=f"手动触发-{job_name}",
-                misfire_grace_time=60
+                misfire_grace_time=20,
+                coalesce=True
             )
             logger.debug(f"已提交手动任务: {job_name}")
 
@@ -1380,7 +1396,8 @@ class MainWindow(QMainWindow, Ui_MainWindow):
                 args=[event_key, open_id],
                 id=str(uuid.uuid4())[:8],
                 name=f"回调触发-{event_key}",
-                misfire_grace_time=60
+                misfire_grace_time=20,
+                coalesce=True
             )
             logger.debug(f"已提交回调任务: {event_key}")
 
